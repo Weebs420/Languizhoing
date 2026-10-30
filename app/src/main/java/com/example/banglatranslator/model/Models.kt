@@ -10,9 +10,13 @@ data class TranslationResult(
     val originalBangla: String,
     val translation: String,
     val literal: String,
-    val spanish: String,
-    val tone: Tone,
-    val notes: List<String>
+    val targetLanguage: TargetLanguage = TargetLanguage.ENGLISH_US,
+    val spanish: String = "",
+    val tone: Tone = Tone.NEUTRAL,
+    val pronunciation: String? = null,
+    val notes: List<String> = emptyList(),
+    val isGeminiPowered: Boolean = false,
+    val detectedDialect: String? = null
 )
 
 data class PhrasebookEntry(

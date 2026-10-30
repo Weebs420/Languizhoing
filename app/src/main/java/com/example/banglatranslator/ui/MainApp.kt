@@ -6,11 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoStories
-import androidx.compose.material.icons.filled.Feed
-import androidx.compose.material.icons.filled.GTranslate
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -24,7 +20,7 @@ enum class AppTab(val title: String, val icon: ImageVector) {
     TRANSLATE("Translate", Icons.Default.GTranslate),
     PHRASEBOOK("Phrasebook", Icons.Default.AutoStories),
     VOCABULARY("Vocab", Icons.Default.MenuBook),
-    NEWS("News", Icons.Default.Feed),
+    COACHING("Coaching", Icons.Default.WorkspacePremium),
     GUIDE("Guide", Icons.Default.School)
 }
 
@@ -78,7 +74,7 @@ fun MainApp() {
             AppTab.TRANSLATE -> TranslatorScreen(modifier = screenModifier)
             AppTab.PHRASEBOOK -> PhrasebookScreen(modifier = screenModifier)
             AppTab.VOCABULARY -> VocabularyScreen(modifier = screenModifier)
-            AppTab.NEWS -> NewsScreen(modifier = screenModifier)
+            AppTab.COACHING -> CoachingScreen(modifier = screenModifier)
             AppTab.GUIDE -> GrammarGuideScreen(modifier = screenModifier)
         }
     }

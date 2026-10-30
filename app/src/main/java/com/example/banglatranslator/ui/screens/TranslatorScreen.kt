@@ -1,12 +1,12 @@
 package com.example.banglatranslator.ui.screens
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -15,11 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,28 +31,30 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.banglatranslator.data.TranslationEngine
+import com.example.banglatranslator.data.GeminiTranslationService
+import com.example.banglatranslator.model.TargetLanguage
 import com.example.banglatranslator.model.Tone
 import com.example.banglatranslator.model.TranslationResult
 import com.example.banglatranslator.ui.theme.TealAccent
 import com.example.banglatranslator.ui.theme.TealDark
 import com.example.banglatranslator.ui.theme.TealPrimary
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TranslatorScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
+    val coroutineScope = rememberCoroutineScope()
 
     var text by remember { mutableStateOf("ভাই, আজকে অফিসে অনেক প্যারা গেছে। চিল করতে চাই, চলো কোথাও ঘুরে আসি।") }
+    var selectedLanguage by remember { mutableStateOf(TargetLanguage.ENGLISH_US) }
     var tone by remember { mutableStateOf(Tone.CASUAL) }
+    var isDropdownExpanded by remember { mutableStateOf(false) }
+
     var result by remember { mutableStateOf<TranslationResult?>(null) }
     var isTranslating by remember { mutableStateOf(false) }
     var copiedField by remember { mutableStateOf<String?>(null) }
-
-    // Initial translation on first launch
-    LaunchedEffect(Unit) {
-        result = TranslationEngine.translate(text, tone)
-    }
 
     val samplePhrases = listOf(
         "ভাই, আজকে অফিসে অনেক প্যারা গেছে। চিল করতে চাই, চলো কোথাও ঘুরে আসি।",
@@ -67,10 +65,44 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
         "গানটা সেই ছিল!"
     )
 
+    fun performTranslation() {
+        if (text.isBlank() || isTranslating) return
+        coroutineScope.launch {
+            isTranslating = true
+            result = GeminiTranslationService.translate(text, selectedLanguage, tone)
+            isTranslating = false
+        }
+    }
+
+    // Initial translation on launch
+    LaunchedEffect(Unit) {
+        performTranslation()
+    }
+
     fun copyToClipboard(content: String, label: String) {
         clipboardManager.setText(AnnotatedString(content))
         copiedField = label
         Toast.makeText(context, "$label copied", Toast.LENGTH_SHORT).show()
+    }
+
+    fun shareText(content: String) {
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, content)
+            type = "text/plain"
+        }
+        val shareIntent = Intent.createChooser(sendIntent, "Share translation via")
+        context.startActivity(shareIntent)
+    }
+
+    fun pasteFromClipboard() {
+        val clip = clipboardManager.getText()
+        if (clip != null && clip.text.isNotBlank()) {
+            text = clip.text
+            Toast.makeText(context, "Pasted from clipboard", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Clipboard is empty", Toast.LENGTH_SHORT).show()
+        }
     }
 
     Column(
@@ -78,7 +110,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        // Gradient Header
+        // Header with Brand and Gemini Status Badge
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -90,36 +122,63 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 )
                 .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.2f)),
-                    contentAlignment = Alignment.Center
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        text = "বE",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Column {
-                    Text(
-                        text = "Bangla → American",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Native-sounding translations, idioms and all",
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontSize = 13.sp
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "বE",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Bangla AI Translator",
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Native translations powered by Gemini API",
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 13.sp
+                        )
+                    }
+
+                    // Model Badge
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color.White.copy(alpha = 0.2f)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = "Gemini",
+                                tint = Color(0xFFFFD54F),
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = "Gemini 2.5",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -132,7 +191,123 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Bangla Input Card
+            // Target Language Selector Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("target_language_card"),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = CardDefaults.outlinedCardBorder()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "TARGET LANGUAGE",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 0.6.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Dropdown Menu Box
+                    ExposedDropdownMenuBox(
+                        expanded = isDropdownExpanded,
+                        onExpandedChange = { isDropdownExpanded = !isDropdownExpanded },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = "${selectedLanguage.flagEmoji}  ${selectedLanguage.displayName} (${selectedLanguage.localizedName})",
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = isDropdownExpanded)
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = TealPrimary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                                .testTag("target_language_dropdown")
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = isDropdownExpanded,
+                            onDismissRequest = { isDropdownExpanded = false }
+                        ) {
+                            TargetLanguage.values().forEach { lang ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Text(text = lang.flagEmoji, fontSize = 20.sp)
+                                            Column {
+                                                Text(
+                                                    text = lang.displayName,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 14.sp
+                                                )
+                                                Text(
+                                                    text = lang.localizedName,
+                                                    fontSize = 12.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        selectedLanguage = lang
+                                        isDropdownExpanded = false
+                                        performTranslation()
+                                    },
+                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Quick Select Horizontal Language Chips
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TargetLanguage.quickLanguages.forEach { lang ->
+                            val isSelected = selectedLanguage == lang
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    selectedLanguage = lang
+                                    performTranslation()
+                                },
+                                label = {
+                                    Text(
+                                        text = "${lang.flagEmoji} ${lang.displayName.substringBefore(" ")}",
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = TealPrimary,
+                                    selectedLabelColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Input Text Field for Bangla
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -148,35 +323,71 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "BANGLA",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary
+                            text = "BANGLA INPUT (বাংলা)",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            letterSpacing = 0.6.sp
                         )
-                        if (text.isNotEmpty()) {
-                            Row(
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            // Paste Button
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                                    .clickable {
-                                        text = ""
-                                        result = null
-                                    }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    .clickable { pasteFromClipboard() }
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Clear,
-                                    contentDescription = "Clear",
-                                    modifier = Modifier.size(14.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = "Clear",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ContentPaste,
+                                        contentDescription = "Paste",
+                                        modifier = Modifier.size(13.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "Paste",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            // Clear Button
+                            if (text.isNotEmpty()) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            text = ""
+                                            result = null
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Clear,
+                                            contentDescription = "Clear",
+                                            modifier = Modifier.size(13.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "Clear",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -192,14 +403,16 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             .testTag("bangla_text_field"),
                         placeholder = {
                             Text(
-                                "এখানে বাংলায় লিখুন...",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                "এখানে বাংলায় লিখুন... (e.g. ভাই, আজকে অফিসে অনেক প্যারা গেছে...)",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                fontSize = 15.sp
                             )
                         },
                         colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color.Transparent,
-                            focusedBorderColor = Color.Transparent
-                        )
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                            focusedBorderColor = TealPrimary
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -213,7 +426,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 }
             }
 
-            // Tone Selector Chips
+            // Tone & Register Selector Chips
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -225,9 +438,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             .weight(1f)
                             .clickable {
                                 tone = t
-                                if (text.isNotBlank()) {
-                                    result = TranslationEngine.translate(text, tone)
-                                }
+                                performTranslation()
                             }
                             .testTag("tone_chip_${t.id}"),
                         shape = RoundedCornerShape(12.dp),
@@ -245,12 +456,12 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             Text(
                                 text = t.label,
                                 fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp,
+                                fontSize = 13.sp,
                                 color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = t.hint,
-                                fontSize = 11.sp,
+                                fontSize = 10.sp,
                                 color = if (isSelected) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -258,44 +469,49 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 }
             }
 
-            // Translate Action Button
+            // 'Translate' Button that calls Gemini API
             Button(
-                onClick = {
-                    if (text.isNotBlank()) {
-                        isTranslating = true
-                        result = TranslationEngine.translate(text, tone)
-                        isTranslating = false
-                    }
-                },
-                enabled = text.isNotBlank(),
+                onClick = { performTranslation() },
+                enabled = text.isNotBlank() && !isTranslating,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .height(54.dp)
                     .testTag("translate_button"),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = TealPrimary,
                     contentColor = Color.White
-                )
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                if (isTranslating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "Translating with Gemini API…",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                } else {
                     Icon(
-                        imageVector = Icons.Default.ArrowDownward,
+                        imageVector = Icons.Default.AutoAwesome,
                         contentDescription = "Translate",
                         modifier = Modifier.size(18.dp)
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (isTranslating) "Translating…" else "Translate",
-                        fontSize = 16.sp,
+                        text = "Translate to ${selectedLanguage.displayName}",
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
             }
 
-            // Sample phrases horizontal carousel
+            // Quick Sample Chips
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     text = "Try a sample phrase:",
@@ -314,7 +530,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                 .clip(RoundedCornerShape(10.dp))
                                 .clickable {
                                     text = sample
-                                    result = TranslationEngine.translate(sample, tone)
+                                    performTranslation()
                                 }
                                 .widthIn(max = 240.dp),
                             shape = RoundedCornerShape(10.dp),
@@ -333,7 +549,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 }
             }
 
-            // Results Section
+            // Translation Output Card
             AnimatedVisibility(
                 visible = result != null && result?.translation?.isNotBlank() == true,
                 enter = fadeIn(),
@@ -341,84 +557,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
             ) {
                 result?.let { currentResult ->
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        // Trilingual Preview Card
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("dictionary_preview_card"),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            border = CardDefaults.outlinedCardBorder()
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Book,
-                                            contentDescription = null,
-                                            tint = TealPrimary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Text(
-                                            text = "DICTIONARY PREVIEW",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                    Text(
-                                        text = "3 languages",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                // Row 1: Bangla
-                                LanguageRow(
-                                    label = "BANGLA",
-                                    value = text,
-                                    isCopied = copiedField == "Bangla",
-                                    onCopy = { copyToClipboard(text, "Bangla") }
-                                )
-
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = 8.dp),
-                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                                )
-
-                                // Row 2: American English
-                                LanguageRow(
-                                    label = "AMERICAN ENGLISH",
-                                    value = currentResult.translation,
-                                    isCopied = copiedField == "English",
-                                    onCopy = { copyToClipboard(currentResult.translation, "English") }
-                                )
-
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = 8.dp),
-                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                                )
-
-                                // Row 3: Spanish
-                                LanguageRow(
-                                    label = "SPANISH",
-                                    value = currentResult.spanish,
-                                    isCopied = copiedField == "Spanish",
-                                    onCopy = { copyToClipboard(currentResult.spanish, "Spanish") }
-                                )
-                            }
-                        }
-
-                        // Main American English Translation Card
+                        // Main Target Language Translation Card
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -437,29 +576,42 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(8.dp)
-                                                .background(TealPrimary, CircleShape)
-                                        )
+                                        Text(text = selectedLanguage.flagEmoji, fontSize = 16.sp)
                                         Text(
-                                            text = "AMERICAN ENGLISH (${tone.label.uppercase()})",
+                                            text = "${selectedLanguage.displayName.uppercase()} (${tone.label.uppercase()})",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     }
 
-                                    IconButton(
-                                        onClick = { copyToClipboard(currentResult.translation, "Translation") },
-                                        modifier = Modifier.size(32.dp)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
                                     ) {
-                                        Icon(
-                                            imageVector = if (copiedField == "Translation") Icons.Default.Check else Icons.Default.ContentCopy,
-                                            contentDescription = "Copy Translation",
-                                            tint = if (copiedField == "Translation") TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(16.dp)
-                                        )
+                                        IconButton(
+                                            onClick = { shareText(currentResult.translation) },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Share,
+                                                contentDescription = "Share",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+
+                                        IconButton(
+                                            onClick = { copyToClipboard(currentResult.translation, selectedLanguage.displayName) },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (copiedField == selectedLanguage.displayName) Icons.Default.Check else Icons.Default.ContentCopy,
+                                                contentDescription = "Copy Translation",
+                                                tint = if (copiedField == selectedLanguage.displayName) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
                                     }
                                 }
 
@@ -467,15 +619,52 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
 
                                 Text(
                                     text = currentResult.translation,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    lineHeight = 26.sp,
+                                    fontSize = 19.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    lineHeight = 27.sp,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
+
+                                currentResult.pronunciation?.let { pron ->
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.RecordVoiceOver,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(13.dp),
+                                            tint = TealAccent
+                                        )
+                                        Text(
+                                            text = pron,
+                                            fontSize = 13.sp,
+                                            fontStyle = FontStyle.Italic,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                currentResult.detectedDialect?.let { dialect ->
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant
+                                    ) {
+                                        Text(
+                                            text = "DIALECT: $dialect",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
 
-                        // Literal Card
+                        // Literal Translation Card
                         if (currentResult.literal.isNotBlank()) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
@@ -490,7 +679,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "LITERAL",
+                                            text = "LITERAL WORD-BY-WORD",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -530,13 +719,13 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.Book,
+                                            imageVector = Icons.Default.Lightbulb,
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            modifier = Modifier.size(14.dp)
+                                            modifier = Modifier.size(15.dp)
                                         )
                                         Text(
-                                            text = "TRANSLATOR'S NOTES",
+                                            text = "LINGUISTIC & CULTURAL NOTES",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -573,48 +762,6 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-private fun LanguageRow(
-    label: String,
-    value: String,
-    isCopied: Boolean,
-    onCopy: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                letterSpacing = 0.5.sp
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = value,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-        IconButton(
-            onClick = onCopy,
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                imageVector = if (isCopied) Icons.Default.Check else Icons.Default.ContentCopy,
-                contentDescription = "Copy $label",
-                tint = if (isCopied) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(14.dp)
-            )
         }
     }
 }
