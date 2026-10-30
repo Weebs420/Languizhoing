@@ -32,19 +32,54 @@ import com.example.banglatranslator.ui.theme.TealAccent
 import com.example.banglatranslator.ui.theme.TealDark
 import com.example.banglatranslator.ui.theme.TealPrimary
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoachingScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    var selectedSubTab by remember { mutableStateOf(0) } // 0 = Plans & Pricing, 1 = 1:1 Mentors & Progress
     var selectedRegion by remember { mutableStateOf(CurrencyRegion.BANGLADESH) }
     var currentActiveTierId by remember { mutableStateOf("free") }
     var selectedCoachForBooking by remember { mutableStateOf<CoachProfile?>(null) }
     var showPlanConfirmationDialog by remember { mutableStateOf<CoachingTier?>(null) }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-    ) {
+    Column(modifier = modifier.fillMaxSize()) {
+        // Top Sub-Tabs for Pricing vs Mentors & Progress
+        PrimaryTabRow(
+            selectedTabIndex = selectedSubTab,
+            containerColor = TealDark,
+            contentColor = Color.White
+        ) {
+            Tab(
+                selected = selectedSubTab == 0,
+                onClick = { selectedSubTab = 0 },
+                text = { Text("Subscription Plans", fontWeight = FontWeight.SemiBold) },
+                icon = { Icon(Icons.Default.Loyalty, contentDescription = null) },
+                selectedContentColor = Color.White,
+                unselectedContentColor = Color.White.copy(alpha = 0.7f)
+            )
+            Tab(
+                selected = selectedSubTab == 1,
+                onClick = { selectedSubTab = 1 },
+                text = { Text("1:1 Mentors & Progress", fontWeight = FontWeight.SemiBold) },
+                icon = { Icon(Icons.Default.Groups, contentDescription = null) },
+                selectedContentColor = Color.White,
+                unselectedContentColor = Color.White.copy(alpha = 0.7f)
+            )
+        }
+
+        if (selectedSubTab == 0) {
+            PricingScreen(
+                modifier = Modifier.fillMaxSize(),
+                onPlanSelected = { tier ->
+                    currentActiveTierId = tier.id
+                }
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
         // Gradient Hero Header
         Box(
             modifier = Modifier
@@ -633,6 +668,7 @@ fun CoachingScreen(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(30.dp))
         }
     }
+    }
 
     // Plan Activation Confirmation Dialog
     showPlanConfirmationDialog?.let { tier ->
@@ -743,4 +779,5 @@ fun CoachingScreen(modifier: Modifier = Modifier) {
             }
         )
     }
+}
 }
