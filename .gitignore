@@ -1,11 +1,7 @@
-*.iml
-.gradle
-/local.properties
-/.idea
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
-.env
+# Local database files
+*.db
+*.sqlite3
+
+# Python bytecode
+__pycache__/
+*.py[cod]
