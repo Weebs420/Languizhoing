@@ -1,0 +1,6 @@
+{
+  "name": "Bangla Translator",
+  "description": "Bangla to American English translator with natural idioms, slang tone selection, phrasebook, Oxford vocabulary, and bilingual news.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
