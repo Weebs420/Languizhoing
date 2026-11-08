@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -60,9 +61,10 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
     var copiedField by remember { mutableStateOf<String?>(null) }
     var swapRotation by remember { mutableFloatStateOf(0f) }
 
-    // TextToSpeech for multi-sensory pronunciation (Dual Coding Theory)
+    // TextToSpeech for pronunciation with Auditory-Visual Mapping
     var tts by remember { mutableStateOf<TextToSpeech?>(null) }
     var isTtsReady by remember { mutableStateOf(false) }
+    var isSpeaking by remember { mutableStateOf(false) }
 
     DisposableEffect(context) {
         val speech = TextToSpeech(context) { status ->
@@ -70,6 +72,17 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 isTtsReady = true
             }
         }
+        speech.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {
+                isSpeaking = true
+            }
+            override fun onDone(utteranceId: String?) {
+                isSpeaking = false
+            }
+            override fun onError(utteranceId: String?) {
+                isSpeaking = false
+            }
+        })
         tts = speech
         onDispose {
             try {
@@ -94,10 +107,11 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 else -> Locale.US
             }
             engine.language = locale
+            isSpeaking = true
             engine.speak(content, TextToSpeech.QUEUE_FLUSH, null, "tts_utterance_${System.currentTimeMillis()}")
-            Toast.makeText(context, "Playing pronunciation…", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Playing audio pronunciation…", Toast.LENGTH_SHORT).show()
         } ?: run {
-            Toast.makeText(context, "Speech synthesis initializing…", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Speech engine initializing…", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -110,7 +124,6 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    // Initial translation on launch
     LaunchedEffect(Unit) {
         performTranslation()
     }
@@ -168,7 +181,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        // 1. Header with Psychology & AI Transparency (Jakob's Law & Ethical Disclosure)
+        // Top Header: System State Signifiers
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -207,15 +220,14 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Idiomatic & Uncensored Translation · Powered by Gemini 3.8",
+                            text = "Idiomatic, Slang & Uncensored Cross-Language Engine",
                             color = Color.White.copy(alpha = 0.85f),
                             fontSize = 12.sp
                         )
                     }
 
-                    // Cognitive Status Badges
+                    // System State Signifiers
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        // Uncensored Mode Pill
                         Surface(
                             shape = RoundedCornerShape(20.dp),
                             color = Color(0xFFD32F2F).copy(alpha = 0.9f),
@@ -228,7 +240,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.LockOpen,
-                                    contentDescription = "Uncensored",
+                                    contentDescription = "Uncensored mode enabled",
                                     tint = Color.White,
                                     modifier = Modifier.size(11.dp)
                                 )
@@ -241,7 +253,6 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             }
                         }
 
-                        // Gemini Model Transparency Badge
                         Surface(
                             shape = RoundedCornerShape(20.dp),
                             color = Color.White.copy(alpha = 0.2f)
@@ -253,7 +264,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = "Gemini AI",
+                                    contentDescription = "Gemini Model",
                                     tint = Color(0xFFFFD54F),
                                     modifier = Modifier.size(11.dp)
                                 )
@@ -278,7 +289,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 2. JAKOB'S LAW: Universal Bilateral Language Exchange Bar
+            // SIGNIFIER 1: Bilateral Language Exchange Bar with Explicit Interactive Affordances
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -290,61 +301,79 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Source: Bangla (Fixed Source)
+                    // Left: Source Language (Signified as Source)
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, TealPrimary.copy(alpha = 0.3f)),
                         modifier = Modifier.weight(1f)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(text = "🇧🇩", fontSize = 18.sp)
                             Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Text(
+                                        text = "Bangla",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = "Fixed source",
+                                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(10.dp)
+                                    )
+                                }
                                 Text(
-                                    text = "Bangla",
-                                    style = MaterialTheme.typography.labelSmall,
+                                    text = "SOURCE (বাংলা)",
+                                    fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = "বাংলা (Source)",
-                                    fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                     }
 
-                    // FITTS'S LAW: Swap / Orientation Button with generous touch target (48dp)
-                    Box(
+                    // Middle: Swap Action Signifier (48dp Touch Target, Rotating Double Arrow)
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, TealPrimary.copy(alpha = 0.4f)),
                         modifier = Modifier
+                            .padding(horizontal = 6.dp)
                             .minimumInteractiveComponentSize()
-                            .size(48.dp)
+                            .size(46.dp)
                             .clip(CircleShape)
                             .clickable {
                                 swapRotation += 180f
                                 performTranslation()
-                            },
-                        contentAlignment = Alignment.Center
+                            }
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.SwapHoriz,
-                            contentDescription = "Swap orientation",
-                            tint = TealPrimary,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .rotate(swapRotation)
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.SwapHoriz,
+                                contentDescription = "Swap orientation",
+                                tint = TealPrimary,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .rotate(swapRotation)
+                            )
+                        }
                     }
 
-                    // Target Language Selector Pill
+                    // Right: Target Language Signifier (Signifying 'Tap to Change' with Down Chevron)
                     ExposedDropdownMenuBox(
                         expanded = isDropdownExpanded,
                         onExpandedChange = { isDropdownExpanded = !isDropdownExpanded },
@@ -353,13 +382,14 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
+                            border = BorderStroke(1.5.dp, TealPrimary.copy(alpha = 0.6f)),
                             modifier = Modifier
                                 .menuAnchor()
                                 .fillMaxWidth()
                                 .testTag("target_language_pill")
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
@@ -378,17 +408,19 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                             maxLines = 1
                                         )
                                         Text(
-                                            text = selectedLanguage.localizedName,
-                                            fontSize = 10.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                            maxLines = 1
+                                            text = "CHANGE ▾",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TealPrimary,
+                                            letterSpacing = 0.5.sp
                                         )
                                     }
                                 }
                                 Icon(
                                     imageVector = if (isDropdownExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                                    contentDescription = "Select language",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    contentDescription = "Tap to open language menu",
+                                    tint = TealPrimary,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
@@ -432,7 +464,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 }
             }
 
-            // HICK'S LAW: Quick Access Language Chips (Minimize Cognitive Choice Friction)
+            // Quick Access Language Signifiers (Visual Filter Pills)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -448,11 +480,24 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             performTranslation()
                         },
                         label = {
-                            Text(
-                                text = "${lang.flagEmoji} ${lang.displayName.substringBefore(" ")}",
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(lang.flagEmoji, fontSize = 13.sp)
+                                Text(
+                                    text = lang.displayName.substringBefore(" "),
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            }
                         },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = TealPrimary,
@@ -466,7 +511,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 }
             }
 
-            // 3. GESTALT COMMON REGION: Input Card (Encapsulating Text + Paste + Clear + Counter)
+            // SIGNIFIER 2: Input Box with State Indicator Signifiers
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -476,67 +521,109 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 border = CardDefaults.outlinedCardBorder()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
+                    // Header Bar with Explicit Action Signifiers
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "BANGLA INPUT (বাংলা)",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            letterSpacing = 0.6.sp
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "BANGLA INPUT",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                letterSpacing = 0.6.sp
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = if (text.isNotBlank()) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Text(
+                                    text = if (text.isNotBlank()) "ACTIVE" else "EMPTY",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (text.isNotBlank()) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
 
-                        // FITTS'S LAW: Accessible 48dp action buttons for Paste & Clear
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            // Paste Button
-                            TextButton(
-                                onClick = { pasteFromClipboard() },
+                        // Labeled Signifiers for Paste & Clear with 48dp Touch Affordance
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            // Paste Affordance
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
                                 modifier = Modifier
                                     .minimumInteractiveComponentSize()
-                                    .height(36.dp)
-                                    .testTag("paste_button"),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                colors = ButtonDefaults.textButtonColors(contentColor = TealDark)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { pasteFromClipboard() }
+                                    .testTag("paste_button")
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.ContentPaste,
-                                    contentDescription = "Paste",
-                                    modifier = Modifier.size(15.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(text = "Paste", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            }
-
-                            // Clear Button
-                            if (text.isNotEmpty()) {
-                                TextButton(
-                                    onClick = {
-                                        text = ""
-                                        result = null
-                                    },
-                                    modifier = Modifier
-                                        .minimumInteractiveComponentSize()
-                                        .height(36.dp)
-                                        .testTag("clear_button"),
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Clear,
-                                        contentDescription = "Clear",
-                                        modifier = Modifier.size(15.dp)
+                                        imageVector = Icons.Default.ContentPaste,
+                                        contentDescription = "Paste text",
+                                        tint = TealDark,
+                                        modifier = Modifier.size(14.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(text = "Clear", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        text = "Paste",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TealDark
+                                    )
+                                }
+                            }
+
+                            // Clear Affordance
+                            if (text.isNotEmpty()) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
+                                    modifier = Modifier
+                                        .minimumInteractiveComponentSize()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            text = ""
+                                            result = null
+                                        }
+                                        .testTag("clear_button")
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Clear,
+                                            contentDescription = "Clear text",
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Text(
+                                            text = "Clear",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
                         value = text,
@@ -547,7 +634,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             .testTag("bangla_text_field"),
                         placeholder = {
                             Text(
-                                "Type or paste Bangla here... (Uncensored: street slang, idioms, profanities supported)",
+                                "Type or paste Bangla here... (Uncensored: street slang, idioms, swear words supported)",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                 fontSize = 14.sp
                             )
@@ -561,20 +648,21 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
 
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    // DOHERTY THRESHOLD: Real-time Metric Feedback
+                    // Live Counter Signifier
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         val wordCount = if (text.isBlank()) 0 else text.trim().split(Regex("\\s+")).size
                         Text(
-                            text = "$wordCount ${if (wordCount == 1) "word" else "words"}",
+                            text = "📊 $wordCount ${if (wordCount == 1) "word" else "words"}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         Text(
-                            text = "${text.length} / 4000",
+                            text = "${text.length} / 4000 characters",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -582,14 +670,25 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 }
             }
 
-            // 4. HICK'S LAW: Structured Tone & Register Selector (3 Clear Paths)
+            // SIGNIFIER 3: Tone Register Cards with Explicit Radio Selection Signifiers
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "TRANSLATION REGISTER & TONE",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "TRANSLATION REGISTER & TONE",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "(SELECT ONE)",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        color = TealPrimary
+                    )
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -610,7 +709,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             colors = CardDefaults.cardColors(
                                 containerColor = if (isSelected) TealPrimary else MaterialTheme.colorScheme.surface
                             ),
-                            border = if (isSelected) null else CardDefaults.outlinedCardBorder()
+                            border = if (isSelected) BorderStroke(2.dp, TealDark) else CardDefaults.outlinedCardBorder()
                         ) {
                             Column(
                                 modifier = Modifier
@@ -622,16 +721,12 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    val icon = when (t) {
-                                        Tone.CASUAL -> Icons.Default.ChatBubbleOutline
-                                        Tone.NEUTRAL -> Icons.Default.Balance
-                                        Tone.FORMAL -> Icons.Default.BusinessCenter
-                                    }
+                                    // Geometric state signifier for color-blind accessibility
                                     Icon(
-                                        imageVector = icon,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(13.dp),
-                                        tint = if (isSelected) Color.White else TealPrimary
+                                        imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                        contentDescription = if (isSelected) "Selected" else "Unselected",
+                                        tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(13.dp)
                                     )
                                     Text(
                                         text = t.label,
@@ -651,10 +746,11 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 }
             }
 
-            // 5. FITTS'S LAW: Primary Call-to-Action (Generous Size & Thumb Reach)
+            // AFFORDANCE & SIGNIFIER: Primary Action Button with Explicit Affordance State
+            val isTranslateAfforded = text.isNotBlank() && !isTranslating
             Button(
                 onClick = { performTranslation() },
-                enabled = text.isNotBlank() && !isTranslating,
+                enabled = isTranslateAfforded,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp)
@@ -662,9 +758,15 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = TealPrimary,
-                    contentColor = Color.White
+                    contentColor = Color.White,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
                 ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp)
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 4.dp,
+                    pressedElevation = 1.dp,
+                    disabledElevation = 0.dp
+                )
             ) {
                 if (isTranslating) {
                     CircularProgressIndicator(
@@ -678,25 +780,37 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold
                     )
-                } else {
+                } else if (text.isBlank()) {
                     Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = "Translate",
+                        imageVector = Icons.Default.EditNote,
+                        contentDescription = "Enter text to enable translation",
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Translate to ${selectedLanguage.displayName}",
+                        text = "Enter Bangla text above to translate",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Translate to ${selectedLanguage.displayName} →",
                         fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            // 6. PROGRESSIVE DISCLOSURE: Categorized Sample Phrases
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Quick Samples with Tap Signifier
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "Try a sample phrase:",
+                    text = "Tap any sample phrase to load:",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -706,7 +820,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                         Text(
                             text = catTitle,
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = TealDark
                         )
                         Row(
@@ -729,13 +843,24 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                     color = MaterialTheme.colorScheme.surface,
                                     border = CardDefaults.outlinedCardBorder()
                                 ) {
-                                    Text(
-                                        text = sample,
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        maxLines = 2,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.NorthEast,
+                                            contentDescription = "Use phrase",
+                                            tint = TealPrimary,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Text(
+                                            text = sample,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 2
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -743,7 +868,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 }
             }
 
-            // 7. DOHERTY THRESHOLD: Skeleton Feedback during translation
+            // Shimmer Loading Signifier
             AnimatedVisibility(
                 visible = isTranslating,
                 enter = fadeIn() + expandVertically(),
@@ -776,7 +901,6 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        // Shimmering skeleton placeholders
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth(0.9f)
@@ -795,7 +919,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 }
             }
 
-            // 8. MILLER'S LAW: Chunked Translation Output Cards
+            // SIGNIFIER 5: Translation Output with Clear Action Labels & Engine State Beacon
             AnimatedVisibility(
                 visible = result != null && result?.translation?.isNotBlank() == true,
                 enter = fadeIn(),
@@ -803,7 +927,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
             ) {
                 result?.let { currentResult ->
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        // Peak-End Rule: Animated Copy Feedback Pill
+                        // Peak-End Rule: Animated Feedback Signifier
                         AnimatedVisibility(
                             visible = copiedField != null,
                             enter = fadeIn() + slideInVertically(),
@@ -835,16 +959,63 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             }
                         }
 
-                        // Card A: Primary Target Language Translation
+                        // NATURAL MAPPING: Source-to-Target Data Flow Connector
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            HorizontalDivider(modifier = Modifier.weight(1f), color = TealPrimary.copy(alpha = 0.35f))
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                border = BorderStroke(1.dp, TealPrimary.copy(alpha = 0.4f)),
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "🇧🇩 Source",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowForward,
+                                        contentDescription = "Maps to target",
+                                        tint = TealPrimary,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Text(
+                                        text = "${selectedLanguage.flagEmoji} ${selectedLanguage.displayName.substringBefore(" ")}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TealDark
+                                    )
+                                    Text(
+                                        text = "(${tone.label})",
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            HorizontalDivider(modifier = Modifier.weight(1f), color = TealPrimary.copy(alpha = 0.35f))
+                        }
+
+                        // Primary Translation Card with Direct Spatial Mapping
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("result_card"),
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            border = BorderStroke(1.5.dp, TealPrimary)
+                            border = if (isSpeaking) BorderStroke(2.dp, TealAccent) else BorderStroke(1.5.dp, TealPrimary)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
+                                // Top status bar: Language + Engine State Signifier
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -852,7 +1023,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
                                         Text(text = selectedLanguage.flagEmoji, fontSize = 18.sp)
                                         Text(
@@ -863,70 +1034,63 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                         )
                                     }
 
-                                    // FITTS'S LAW: High-Affordance 48dp Interactive Actions
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                    // Engine State Beacon Signifier (Green = AI Cloud, Amber = Local Engine)
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (currentResult.isGeminiPowered) Color(0xFFE8F5E9) else Color(0xFFFFF8E1),
+                                        border = BorderStroke(1.dp, if (currentResult.isGeminiPowered) Color(0xFF4CAF50) else Color(0xFFFFB300))
                                     ) {
-                                        // DUAL CODING THEORY: Speech/TTS Pronunciation
-                                        IconButton(
-                                            onClick = { speakText(currentResult.translation, selectedLanguage) },
-                                            modifier = Modifier
-                                                .minimumInteractiveComponentSize()
-                                                .size(40.dp)
-                                                .testTag("tts_button")
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.VolumeUp,
-                                                contentDescription = "Listen pronunciation",
-                                                tint = TealPrimary,
-                                                modifier = Modifier.size(20.dp)
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(6.dp)
+                                                    .clip(CircleShape)
+                                                    .background(if (currentResult.isGeminiPowered) Color(0xFF2E7D32) else Color(0xFFF57F17))
                                             )
-                                        }
-
-                                        // Share
-                                        IconButton(
-                                            onClick = { shareText(currentResult.translation) },
-                                            modifier = Modifier
-                                                .minimumInteractiveComponentSize()
-                                                .size(40.dp)
-                                                .testTag("share_button")
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Share,
-                                                contentDescription = "Share",
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-
-                                        // Copy
-                                        IconButton(
-                                            onClick = { copyToClipboard(currentResult.translation, selectedLanguage.displayName) },
-                                            modifier = Modifier
-                                                .minimumInteractiveComponentSize()
-                                                .size(40.dp)
-                                                .testTag("copy_button")
-                                        ) {
-                                            Icon(
-                                                imageVector = if (copiedField == selectedLanguage.displayName) Icons.Default.Check else Icons.Default.ContentCopy,
-                                                contentDescription = "Copy Translation",
-                                                tint = if (copiedField == selectedLanguage.displayName) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(18.dp)
+                                            Text(
+                                                text = if (currentResult.isGeminiPowered) "Gemini 3.8 AI" else "Local Engine",
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (currentResult.isGeminiPowered) Color(0xFF2E7D32) else Color(0xFFF57F17)
                                             )
                                         }
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(10.dp))
 
-                                Text(
-                                    text = currentResult.translation,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    lineHeight = 28.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                                // PERCEIVABLE AFFORDANCE: Native OS text selection handles & copy popup
+                                SelectionContainer {
+                                    Text(
+                                        text = currentResult.translation,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        lineHeight = 28.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.padding(top = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.TouchApp,
+                                        contentDescription = null,
+                                        tint = TealPrimary.copy(alpha = 0.8f),
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = "Text selectable • Long-press or drag handles to highlight words",
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
 
                                 currentResult.pronunciation?.let { pron ->
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -964,10 +1128,93 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                         )
                                     }
                                 }
+
+                                Spacer(modifier = Modifier.height(14.dp))
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                // Bottom Action Bar with EXPLICIT Labeled Signifiers
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // 1. Audio Speaker Signifier with 1:1 Auditory-Visual Mapping
+                                    OutlinedButton(
+                                        onClick = {
+                                            if (isSpeaking) {
+                                                tts?.stop()
+                                                isSpeaking = false
+                                            } else {
+                                                speakText(currentResult.translation, selectedLanguage)
+                                            }
+                                        },
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                        colors = if (isSpeaking) ButtonDefaults.outlinedButtonColors(
+                                            containerColor = TealPrimary.copy(alpha = 0.15f)
+                                        ) else ButtonDefaults.outlinedButtonColors(),
+                                        modifier = Modifier.minimumInteractiveComponentSize().testTag("tts_button")
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isSpeaking) Icons.Default.GraphicEq else Icons.Default.VolumeUp,
+                                            contentDescription = if (isSpeaking) "Stop speech" else "Listen audio pronunciation",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = TealPrimary
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = if (isSpeaking) "Speaking…" else "Listen",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TealPrimary
+                                        )
+                                    }
+
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        // 2. Share Signifier
+                                        OutlinedButton(
+                                            onClick = { shareText(currentResult.translation) },
+                                            shape = RoundedCornerShape(10.dp),
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                            modifier = Modifier.minimumInteractiveComponentSize().testTag("share_button")
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Share,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(14.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(text = "Share", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                        }
+
+                                        // 3. Copy Signifier
+                                        Button(
+                                            onClick = { copyToClipboard(currentResult.translation, selectedLanguage.displayName) },
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                            modifier = Modifier.minimumInteractiveComponentSize().testTag("copy_button")
+                                        ) {
+                                            Icon(
+                                                imageVector = if (copiedField == selectedLanguage.displayName) Icons.Default.Check else Icons.Default.ContentCopy,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = if (copiedField == selectedLanguage.displayName) "Copied" else "Copy",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
 
-                        // Card B: Literal Word-by-Word Translation Card
+                        // Literal Card
                         if (currentResult.literal.isNotBlank()) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
@@ -1001,18 +1248,20 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                             )
                                         }
                                     }
-                                    Text(
-                                        text = currentResult.literal,
-                                        fontSize = 14.sp,
-                                        fontStyle = FontStyle.Italic,
-                                        lineHeight = 20.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    SelectionContainer {
+                                        Text(
+                                            text = currentResult.literal,
+                                            fontSize = 14.sp,
+                                            fontStyle = FontStyle.Italic,
+                                            lineHeight = 20.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
                         }
 
-                        // Card C: Cultural & Linguistic Insights
+                        // Insights Card
                         if (currentResult.notes.isNotEmpty()) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),

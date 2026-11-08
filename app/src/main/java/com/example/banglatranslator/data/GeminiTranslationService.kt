@@ -72,10 +72,10 @@ object GeminiTranslationService {
             try {
                 return@withContext executeGeminiRequest(trimmed, targetLanguage, tone, apiKey)
             } catch (e: SocketTimeoutException) {
-                Log.w(TAG, "Gemini translation attempt $attempt timed out", e)
+                Log.w(TAG, "Gemini translation attempt $attempt timed out: ${e.message}")
                 lastException = e
             } catch (e: Exception) {
-                Log.e(TAG, "Gemini translation attempt $attempt failed", e)
+                Log.w(TAG, "Gemini translation attempt $attempt notice: ${e.message}")
                 lastException = e
                 break // Don't retry non-timeout errors
             }
@@ -85,7 +85,7 @@ object GeminiTranslationService {
             trimmed,
             tone,
             targetLanguage,
-            if (lastException is SocketTimeoutException) "Network connection timed out" else (lastException?.message ?: "Network error")
+            if (lastException is SocketTimeoutException) "Network connection timed out" else (lastException?.message ?: "Cloud service unavailable")
         )
     }
 
@@ -160,56 +160,88 @@ object GeminiTranslationService {
             put("safetySettings", safetySettings)
         }
 
-        val requestUrl = "$API_BASE_URL/$GEMINI_MODEL:generateContent?key=$apiKey"
-        val request = Request.Builder()
-            .url(requestUrl)
-            .post(requestBodyJson.toString().toRequestBody("application/json".toMediaType()))
-            .build()
+        val candidateModels = listOf("gemini-3.8-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash")
+        var lastFailureReason = "Cloud request unavailable"
 
-        val response = client.newCall(request).execute()
-        val responseBody = response.body?.string()
+        for (model in candidateModels) {
+            val requestUrl = "$API_BASE_URL/$model:generateContent?key=$apiKey"
+            val request = Request.Builder()
+                .url(requestUrl)
+                .post(requestBodyJson.toString().toRequestBody("application/json".toMediaType()))
+                .build()
 
-        if (!response.isSuccessful || responseBody == null) {
-            Log.e(TAG, "Gemini API HTTP ${response.code}: $responseBody")
-            return fallbackWithNotice(trimmed, tone, targetLanguage, "Gemini API status ${response.code}")
-        }
+            val response = try {
+                client.newCall(request).execute()
+            } catch (e: Exception) {
+                Log.w(TAG, "Model $model network exception: ${e.message}")
+                lastFailureReason = e.message ?: "Network error"
+                continue
+            }
 
-        val jsonResponse = JSONObject(responseBody)
-        val candidates = jsonResponse.optJSONArray("candidates")
-        if (candidates == null || candidates.length() == 0) {
-            return fallbackWithNotice(trimmed, tone, targetLanguage, "No candidate returned from Gemini")
-        }
+            val responseBody = response.body?.string()
 
-        val firstCandidate = candidates.getJSONObject(0)
-        val content = firstCandidate.getJSONObject("content")
-        val parts = content.getJSONArray("parts")
-        val rawText = parts.getJSONObject(0).getString("text")
+            if (response.code == 429) {
+                Log.w(TAG, "Gemini model $model reached daily rate limit (HTTP 429). Trying fallback or local engine.")
+                lastFailureReason = "Daily cloud AI quota reached"
+                continue
+            }
 
-        val parsedJson = JSONObject(rawText)
-        val translation = parsedJson.optString("translation", "")
-        val literal = parsedJson.optString("literal", "")
-        val pronunciation = parsedJson.optString("pronunciation", "")
-        val detectedDialect = parsedJson.optString("detectedDialect", "Standard Spoken Bangla")
+            if (response.code == 404) {
+                Log.w(TAG, "Gemini model $model unavailable (HTTP 404). Trying next model.")
+                lastFailureReason = "Model unavailable"
+                continue
+            }
 
-        val notesArray = parsedJson.optJSONArray("notes")
-        val notes = mutableListOf<String>()
-        if (notesArray != null) {
-            for (i in 0 until notesArray.length()) {
-                notes.add(notesArray.getString(i))
+            if (!response.isSuccessful || responseBody == null) {
+                Log.w(TAG, "Gemini API HTTP ${response.code} on model $model.")
+                lastFailureReason = "API status ${response.code}"
+                continue
+            }
+
+            try {
+                val jsonResponse = JSONObject(responseBody)
+                val candidates = jsonResponse.optJSONArray("candidates")
+                if (candidates == null || candidates.length() == 0) {
+                    continue
+                }
+
+                val firstCandidate = candidates.getJSONObject(0)
+                val content = firstCandidate.getJSONObject("content")
+                val parts = content.getJSONArray("parts")
+                val rawText = parts.getJSONObject(0).getString("text")
+
+                val parsedJson = JSONObject(rawText)
+                val translation = parsedJson.optString("translation", "")
+                val literal = parsedJson.optString("literal", "")
+                val pronunciation = parsedJson.optString("pronunciation", "")
+                val detectedDialect = parsedJson.optString("detectedDialect", "Standard Spoken Bangla")
+
+                val notesArray = parsedJson.optJSONArray("notes")
+                val notes = mutableListOf<String>()
+                if (notesArray != null) {
+                    for (i in 0 until notesArray.length()) {
+                        notes.add(notesArray.getString(i))
+                    }
+                }
+
+                return TranslationResult(
+                    originalBangla = trimmed,
+                    translation = translation,
+                    literal = literal,
+                    targetLanguage = targetLanguage,
+                    tone = tone,
+                    pronunciation = if (pronunciation.isNotBlank()) pronunciation else null,
+                    notes = notes,
+                    isGeminiPowered = true,
+                    detectedDialect = detectedDialect
+                )
+            } catch (e: Exception) {
+                Log.w(TAG, "Parsing response from $model encountered exception: ${e.message}")
+                lastFailureReason = "Parsing error"
             }
         }
 
-        return TranslationResult(
-            originalBangla = trimmed,
-            translation = translation,
-            literal = literal,
-            targetLanguage = targetLanguage,
-            tone = tone,
-            pronunciation = if (pronunciation.isNotBlank()) pronunciation else null,
-            notes = notes,
-            isGeminiPowered = true,
-            detectedDialect = detectedDialect
-        )
+        return fallbackWithNotice(trimmed, tone, targetLanguage, lastFailureReason)
     }
 
     private fun fallbackWithNotice(
@@ -218,9 +250,14 @@ object GeminiTranslationService {
         targetLanguage: TargetLanguage,
         reason: String
     ): TranslationResult {
+        Log.i(TAG, "Serving translation seamlessly via built-in linguistic engine ($reason)")
         val fallback = TranslationEngine.translate(text, tone, targetLanguage)
         val notes = fallback.notes.toMutableList()
-        notes.add("Note: Cloud request issue ($reason). Results rendered via built-in linguistic engine.")
+        if (reason.contains("quota", ignoreCase = true) || reason.contains("429")) {
+            notes.add("⚡ Local Engine Active: Daily cloud AI request quota reached (Free Tier). Translation rendered via offline linguistic database.")
+        } else {
+            notes.add("⚡ Local Engine Active: Translation rendered via offline linguistic database.")
+        }
         return fallback.copy(
             notes = notes,
             isGeminiPowered = false

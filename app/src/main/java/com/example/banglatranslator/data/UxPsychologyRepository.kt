@@ -3,7 +3,7 @@ package com.example.banglatranslator.data
 data class UxLawPrinciple(
     val id: String,
     val name: String,
-    val type: String, // "Predictive Model", "Cognitive Heuristic", "Gestalt Principle", "AI & Spatial UX", "Ethics & Autonomy"
+    val type: String, // "Human-Centered Design", "Predictive Model", "Cognitive Heuristic", "Gestalt Principle", "AI & Spatial UX", "Ethics & Autonomy"
     val summary: String,
     val psychologicalBasis: String,
     val practicalApplication: String,
@@ -14,6 +14,50 @@ data class UxLawPrinciple(
 object UxPsychologyRepository {
 
     val principles: List<UxLawPrinciple> = listOf(
+        UxLawPrinciple(
+            id = "norman_signifier",
+            name = "The Signifier (Don Norman)",
+            type = "Human-Centered Design",
+            summary = "The signifier is an important communication device to the recipient, whether or not communication was intended. Affordances define what actions are possible; signifiers specify how people discover those possibilities and know what state the system is in.",
+            psychologicalBasis = "Perceptual psychology and semiotics: humans do not perceive physical code or database states; they interpret visual marks, chevrons, tactile elevations, sounds, and text indicators to determine where to act and what the consequences will be.",
+            practicalApplication = "Never leave interactability or state ambiguous. Use explicit signifiers: directional chevrons ('▾') on pickers, labeled buttons with icons ('🔊 Listen', '📋 Copy'), pulsating state dots ('🟢 Gemini 3.8 Active'), focus borders, and clear microcopy.",
+            appImplementationExample = "Applied in this app: The target language pill displays an explicit 'TAP TO CHANGE ▾' signifier; the swap button features rotating arrows ('⇄'); the primary CTA has an arrow cue ('Translate →'); and the AI status is signified by a live green/amber beacon.",
+            keyTakeaways = listOf(
+                "Affordances are physical possibilities; signifiers are the perceptual clues that direct human attention.",
+                "Accidental signifiers mislead users (e.g. static text styled like a clickable link); intentional signifiers prevent errors.",
+                "A robust signifier answers three questions: Where do I tap? What will happen? What state is the system in?"
+            )
+        ),
+        UxLawPrinciple(
+            id = "gibson_affordance",
+            name = "Affordances (Gibson & Norman)",
+            type = "Human-Centered Design",
+            summary = "Affordances are the possible interactions between people and the environment. Some affordances are perceivable; others are not. An affordance exists independently of whether the actor recognizes it.",
+            psychologicalBasis = "Ecological psychology (J.J. Gibson): organisms perceive objects in terms of their affordances for physical action (surfaces afford support, apertures afford passage). In digital product design (Don Norman), flat touchscreen glass lacks mechanical tactile constraints, so designers must make virtual affordances perceivable while ruthlessly eliminating false affordances.",
+            practicalApplication = "Audit interface elements across 4 states: 1) Perceivable (action possible and clear), 2) Hidden (action possible but invisible—e.g. unhinted swipe/long-press gestures), 3) False (looks clickable but inert—e.g. static badges looking like buttons), 4) Correct Rejection. Enable native OS text selection affordances and surface hidden gestures.",
+            appImplementationExample = "Applied in this app: Wrapping output in SelectionContainer to afford native Android text selection and dragging; eliminating false affordances on disabled Translate CTA and static metadata badges; and surfacing hidden audio and copy actions with high-contrast tactile buttons.",
+            keyTakeaways = listOf(
+                "Affordances define what interactions are physically and logically possible.",
+                "Perceivable affordances allow users to take action without instruction manuals or trial-and-error.",
+                "False affordances (e.g. unclickable elements styled like buttons) cause severe user frustration and mistrust.",
+                "Hidden affordances (e.g. gestural swipes or long-press shortcuts) require explicit signifiers to become discoverable."
+            )
+        ),
+        UxLawPrinciple(
+            id = "norman_mapping",
+            name = "Mapping (Don Norman)",
+            type = "Human-Centered Design",
+            summary = "Mapping is a technical term, borrowed from mathematics, meaning the relationship between the elements of two sets of things—specifically between controls and their movements or results in the world. Natural mapping exploits spatial analogies, cultural standards, and physical layout so the relationship is immediately understood.",
+            psychologicalBasis = "Spatial cognition, cognitive schemas, and stimulus-response compatibility (Fitts & Seeger): When controls mirror the physical layout or logical sequence of the objects they control (like light switches arranged matching ceiling lights, or stove knobs matching burner positions), cognitive load is minimal. Arbitrary or reverse mappings cause severe confusion, delayed reaction times, and user error.",
+            practicalApplication = "1) Direct Spatial Collocation: Place manipulation controls directly on or beside the content they affect (e.g. Copy/Listen/Share inside the translated result card, Paste/Clear inside the input box). 2) Directional Alignment: Arrange Source → Arrow → Target in natural reading direction. 3) Semantic Ordering: Arrange tone chips in sequential order of formality (Casual → Neutral → Formal). 4) Interactive Model-to-Display congruence: Rotating the swap button inverts the bilateral language bar.",
+            appImplementationExample = "Applied in this app: Direct spatial mapping places the pronunciation and clipboard tools directly inside the corresponding output card; the input toolbars are nested inside the input card; the bilateral language exchange bar flows Left-to-Right (Bangla 🇧🇩 ⇄ Target 🇺🇸); and tone registers are laid out horizontally from Casual to Formal.",
+            keyTakeaways = listOf(
+                "Natural mapping relies on spatial analogies and cultural conventions so controls feel intuitive without memory effort.",
+                "Collocate controls directly with the objects they affect rather than in a distant disconnected toolbar.",
+                "Directional controls must mirror the flow of data or movement (e.g. Left-to-Right translation direction).",
+                "Poor mapping (like mismatched stove burners or misordered light switches) forces trial-and-error and creates anxiety."
+            )
+        ),
         UxLawPrinciple(
             id = "fitts_law",
             name = "Fitts's Law",
@@ -157,11 +201,14 @@ object UxPsychologyRepository {
     )
 
     val frameworkSteps = listOf(
-        "1. Map Mental Models (Jakob's Law)" to "Analyze how your target audience already solves this problem in everyday apps. Align language, layout, and iconography with established user schemas.",
-        "2. Minimize Decision Pathways (Hick's Law)" to "Reduce choice count to 3–5 items per view. Group secondary options with progressive disclosure so users never experience choice paralysis.",
-        "3. Ergonomic Touch Geometry (Fitts's Law)" to "Ensure every interactive component meets the 48dp x 48dp touch target threshold. Place primary navigation and high-frequency CTAs within the natural thumb zone.",
-        "4. Temporal Response (<400ms Doherty Threshold)" to "Provide instantaneous visual feedback within 100ms. Use shimmer skeletons to manage perceived latency and provide offline fallbacks for reliability.",
-        "5. Cognitive Chunking & Scannability (Miller's Law)" to "Structure complex information into 4–7 visually bounded cards. Use Gestalt Proximity to bind controls directly to their relevant content.",
-        "6. Ethical Transparency & Autonomy Audit" to "Verify that psychological techniques serve to empower the user rather than coerce them. Eliminate deceptive dark patterns, confirmshaming, or hidden traps."
+        "1. Audit & Map Affordances (Gibson & Norman)" to "Determine all possible interactions between the user and the digital environment: ensure critical actions are perceivable, eliminate false affordances (inert elements looking interactive), surface hidden affordances (native OS text selection handles, long-press gestures), and respect physical touch constraints (48dp+ targets).",
+        "2. Specify Clear Signifiers (Norman's Principle)" to "Ensure every affordance is accompanied by an explicit perceptual signifier communicating WHERE to interact, WHAT will happen, and WHAT STATE the system is in through chevrons, labels, borders, and state beacons.",
+        "3. Establish Natural Mappings (Don Norman)" to "Design intuitive spatial, directional, and conceptual relationships between controls and real-world results: collocate manipulation tools directly with the content they govern, mirror physical/reading layouts (Left-to-Right data flow), and order registers logically.",
+        "4. Align with Mental Models (Jakob's Law)" to "Analyze how your target audience already operates in everyday apps. Align language switching, layout, and iconography with established user schemas.",
+        "5. Minimize Decision Pathways (Hick's Law)" to "Reduce choice count to 3–5 items per view. Group secondary options with progressive disclosure so users never experience choice paralysis.",
+        "6. Ergonomic Touch Geometry (Fitts's Law)" to "Ensure every interactive component meets the 48dp x 48dp touch target threshold. Place primary navigation and high-frequency CTAs within the natural thumb zone.",
+        "7. Temporal Response (<400ms Doherty Threshold)" to "Provide instantaneous visual feedback within 100ms. Use shimmer skeletons to manage perceived latency and provide offline fallbacks for reliability.",
+        "8. Cognitive Chunking & Scannability (Miller's Law)" to "Structure complex information into 4–7 visually bounded cards. Use Gestalt Proximity to bind controls directly to their relevant content.",
+        "9. Ethical Transparency & Autonomy Audit" to "Verify that psychological techniques serve to empower the user rather than coerce them. Eliminate deceptive dark patterns, confirmshaming, or hidden traps."
     )
 }
