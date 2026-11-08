@@ -43,6 +43,7 @@ fun PhrasebookScreen(modifier: Modifier = Modifier) {
 
     val categories = listOf(
         null to "All",
+        "uncensored" to "Uncensored / Street",
         "slang" to "Slang",
         "genz" to "Gen Z",
         "idiom" to "Idiom",

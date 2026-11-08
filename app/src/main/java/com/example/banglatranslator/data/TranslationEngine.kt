@@ -208,6 +208,141 @@ object TranslationEngine {
             notes = listOf(
                 "American English naturally uses conversational amplifiers like 'a bunch' or 'a million' for warmth."
             )
+        ),
+        SeedItem(
+            banglaMatches = listOf(
+                "ধুর বাল!",
+                "ধুর বাল",
+                "ধুর বাল ভালো লাগে না"
+            ),
+            casualEn = "Fuck this shit, I'm so over it!",
+            neutralEn = "Damn it, I'm sick and tired of this.",
+            formalEn = "This situation is exceedingly exasperating.",
+            literalEn = "Dhur pubic hair, good it does not feel!",
+            spanish = "¡Al diablo con esta mierda!",
+            notes = listOf(
+                "‘বাল’ literally refers to pubic hair, but in colloquial Dhaka street slang functions identically to 'fuck', 'shit', or 'crap'.",
+                "Uncensored translation preserving the authentic emotional exasperation of raw street speech."
+            )
+        ),
+        SeedItem(
+            banglaMatches = listOf(
+                "কী বাল করছো?",
+                "কি বাল করছো?",
+                "কি বাল করছো",
+                "কী বাল করছিস?"
+            ),
+            casualEn = "What the fuck are you doing?",
+            neutralEn = "What on earth are you doing?",
+            formalEn = "What is the purpose of your current activity?",
+            literalEn = "What hair are you doing?",
+            spanish = "¿Qué mierda estás haciendo?",
+            notes = listOf(
+                "Colloquial vulgar questioning used among peers when someone is acting foolishly or wasting time."
+            )
+        ),
+        SeedItem(
+            banglaMatches = listOf(
+                "বোকাচোদা",
+                "তুই একটা বোকাচোদা",
+                "তুই বোকাচোদা"
+            ),
+            casualEn = "You absolute dumbass motherfucker!",
+            neutralEn = "You complete idiot.",
+            formalEn = "You are acting in an egregiously foolish manner.",
+            literalEn = "Stupid-fucker.",
+            spanish = "¡Eres un tremendo pendejo!",
+            notes = listOf(
+                "Compound profanity merging 'বোকা' (fool) and 'চোদা' (fucker), equivalent to American 'dumbass' or 'motherfucker'."
+            )
+        ),
+        SeedItem(
+            banglaMatches = listOf(
+                "গাঁড় মারিস না",
+                "গাঁড় মারিস না",
+                "মারিস না বেশি"
+            ),
+            casualEn = "Quit busting my balls! / Don't fuck with me!",
+            neutralEn = "Stop messing around with me.",
+            formalEn = "Please cease harassing or bothering me.",
+            literalEn = "Do not beat ass.",
+            spanish = "¡No me toques los cojones!",
+            notes = listOf(
+                "Raw street idiom telling someone to stop bothering, testing, or screwing with you."
+            )
+        ),
+        SeedItem(
+            banglaMatches = listOf(
+                "খানকির পোলা",
+                "খানকির ছেলে"
+            ),
+            casualEn = "You son of a whore! / Bastard!",
+            neutralEn = "Son of a bitch.",
+            formalEn = "A deeply disrespectful scoundrel.",
+            literalEn = "Son of a prostitute.",
+            spanish = "¡Hijo de puta!",
+            notes = listOf(
+                "Severe traditional vulgar insult in Bangla, translated uncensored into its direct American equivalent."
+            )
+        ),
+        SeedItem(
+            banglaMatches = listOf(
+                "শালা",
+                "শালা বদমাশ",
+                "সালা"
+            ),
+            casualEn = "You bastard! / punk!",
+            neutralEn = "You scoundrel.",
+            formalEn = "A disreputable individual.",
+            literalEn = "Brother-in-law (pejorative).",
+            spanish = "¡Maldito cabrón!",
+            notes = listOf(
+                "‘শালা’ literally means brother-in-law (wife's brother), but in colloquial South Asian speech serves as a common insult/pejorative."
+            )
+        ),
+        SeedItem(
+            banglaMatches = listOf(
+                "চোদাস না",
+                "চোদিস না",
+                "বেশি চোদাস না"
+            ),
+            casualEn = "Cut the bullshit and don't fuck around with me!",
+            neutralEn = "Stop acting smart and cut the nonsense.",
+            formalEn = "Do not behave in an insolent manner.",
+            literalEn = "Do not cause to be fucked.",
+            spanish = "¡No te hagas el pendejo conmigo!",
+            notes = listOf(
+                "Direct vulgar imperative telling someone to cease posturing, acting cocky, or talking shit."
+            )
+        ),
+        SeedItem(
+            banglaMatches = listOf(
+                "আবালের দল",
+                "আবাল"
+            ),
+            casualEn = "Pack of clueless morons! / Total circle of dicks!",
+            neutralEn = "Group of utter idiots.",
+            formalEn = "An assemblage of incompetent individuals.",
+            literalEn = "Group of immature fools.",
+            spanish = "¡Manga de idiotas!",
+            notes = listOf(
+                "‘আবাল’ originally meant prepubescent child, but in modern slang functions as 'moron', 'clueless idiot', or 'fool'."
+            )
+        ),
+        SeedItem(
+            banglaMatches = listOf(
+                "ফালতু বাল ছাল",
+                "বাল ছাল",
+                "বালছাল"
+            ),
+            casualEn = "Complete and utter horseshit!",
+            neutralEn = "Absolute garbage.",
+            formalEn = "Worthless nonsense.",
+            literalEn = "Hair and skin.",
+            spanish = "¡Pura mierda!",
+            notes = listOf(
+                "Dhaka vulgar slang for completely useless nonsense or trash talk."
+            )
         )
     )
 
@@ -291,12 +426,15 @@ object TranslationEngine {
         val hasSadhu = text.contains("খাইতেছি") || text.contains("যাইতেছি") || text.contains("করিয়াছেন") || text.contains("তাহারা")
         val hasKop = text.contains("কোপ")
         val hasTag = text.contains("তাই না") || text.contains("নাকি")
+        val hasBal = text.contains("বাল")
+        val hasCurse = text.contains("চোদা") || text.contains("চোদ") || text.contains("শালা") || text.contains("খানকি") || text.contains("কুত্তা") || text.contains("হারামি") || text.contains("গাঁড়") || text.contains("চুতিয়া")
 
         if (hasPara) notes.add("Detected ‘প্যারা’ — rendered as colloquial stress / pressure.")
         if (hasBhai) notes.add("Addressed with ‘ভাই’ — rendered naturally as friendly banter ('man', 'dude') rather than literal 'brother'.")
         if (hasMama) notes.add("Addressed with local Dhaka title ‘মামা’ / ‘বস’ — rendered as 'boss' or 'my guy'.")
         if (hasSadhu) notes.add("Classic Sadhu form identified — modernized into contemporary spoken idiom.")
         if (hasTag) notes.add("Includes spoken confirmation tag — translated to conversational 'right?'.")
+        if (hasBal || hasCurse) notes.add("Uncensored street vulgarity detected — rendered with authentic, direct profanity in American English.")
 
         // Construct context-aware English
         val english = buildString {
@@ -356,6 +494,32 @@ object TranslationEngine {
         var result = text
 
         val dictionary = listOf(
+            "ধুর বাল" to ("fuck this shit!" to "damn it"),
+            "কী বাল" to ("what the fuck" to "what on earth"),
+            "কি বাল" to ("what the fuck" to "what on earth"),
+            "বাল ছাল" to ("total bullshit" to "worthless garbage"),
+            "বালছাল" to ("total bullshit" to "worthless garbage"),
+            "বোকাচোদা" to ("dumbass motherfucker" to "complete idiot"),
+            "গাঁড় মারিস না" to ("don't fuck around with me" to "stop bothering me"),
+            "গাঁড় মারিস না" to ("don't fuck around with me" to "stop bothering me"),
+            "মারিস না" to ("don't mess around" to "stop bothering"),
+            "খানকির পোলা" to ("son of a bitch" to "scoundrel"),
+            "খানকির ছেলে" to ("son of a bitch" to "scoundrel"),
+            "মাগির পোলা" to ("son of a bitch" to "scoundrel"),
+            "কুত্তার বাচ্চা" to ("son of a dog bastard" to "worthless person"),
+            "শালা বদমাশ" to ("crooked bastard" to "dishonest person"),
+            "শালা" to ("bastard" to "scoundrel"),
+            "সালা" to ("bastard" to "scoundrel"),
+            "হারামি" to ("crooked bastard" to "scoundrel"),
+            "চোদাস না" to ("quit talking shit" to "stop bragging"),
+            "চোদিস না" to ("don't fuck with me" to "don't mess with me"),
+            "চুতিয়া" to ("fucking asshole" to "idiot"),
+            "আবালের দল" to ("pack of clueless morons" to "group of fools"),
+            "আবাল" to ("clueless moron" to "foolish person"),
+            "ফালতু" to ("useless crap" to "pointless"),
+            "ভুয়া" to ("fake as hell" to "fraudulent"),
+            "ল্যাওড়া" to ("dick / jack shit" to "nothing at all"),
+            "বাল" to ("bullshit / crap" to "nonsense"),
             "আমি ভাত খাই" to ("I eat rice" to "I consume rice"),
             "ভাত খাই" to ("eating rice" to "dining"),
             "আমি ভালো আছি" to ("I'm doing good" to "I am doing well"),

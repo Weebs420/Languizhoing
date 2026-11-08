@@ -196,6 +196,54 @@ object PhrasebookRepository {
             category = "regional",
             example = "বর্ষায় ঢাকার রাস্তায় হাঁটুজল জমে যায়।",
             note = "Descriptive compound for monsoon waterlogging."
+        ),
+        PhrasebookEntry(
+            id = 25,
+            bangla = "ধুর বাল!",
+            english = "Fuck this shit! / Damn it!",
+            category = "uncensored",
+            example = "ধুর বাল, এই কাজটা আর ভালো লাগছে না।",
+            note = "Extremely common Dhaka street expletive expressing exasperation."
+        ),
+        PhrasebookEntry(
+            id = 26,
+            bangla = "কী বাল করছো?",
+            english = "What the fuck are you doing?",
+            category = "uncensored",
+            example = "ঘণ্টার পর ঘণ্টা বসে কী বাল করছো?",
+            note = "Raw conversational questioning used among friends when someone is messing around."
+        ),
+        PhrasebookEntry(
+            id = 27,
+            bangla = "বোকাচোদা",
+            english = "Dumbass motherfucker / complete idiot",
+            category = "uncensored",
+            example = "ও এমন একটা বোকাচোদা, নিজের ফোনটাই হারায় ফেলল।",
+            note = "Sharp compound insult combining 'বোকা' (fool) and 'চোদা' (fucker)."
+        ),
+        PhrasebookEntry(
+            id = 28,
+            bangla = "গাঁড় মারিস না",
+            english = "Quit busting my balls / don't fuck with me",
+            category = "uncensored",
+            example = "মাথা গরম আছে, বেশি গাঁড় মারিস না।",
+            note = "Direct warning telling someone not to annoy, provoke, or screw with you."
+        ),
+        PhrasebookEntry(
+            id = 29,
+            bangla = "বাল ছাল বকা",
+            english = "Talking absolute bullshit",
+            category = "uncensored",
+            example = "কাজে মন না দিয়ে সারাদিন বাল ছাল বকে।",
+            note = "Street phrase for talking nonsensical, worthless garbage."
+        ),
+        PhrasebookEntry(
+            id = 30,
+            bangla = "আবালের দল",
+            english = "Pack of clueless morons",
+            category = "uncensored",
+            example = "পুরো প্রজেক্টটা আবালের দলের হাতে পড়ে নষ্ট হলো।",
+            note = "Derogatory description of an incompetent group or circle."
         )
     )
 
