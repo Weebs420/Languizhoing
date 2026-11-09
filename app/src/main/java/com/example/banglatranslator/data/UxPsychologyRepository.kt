@@ -59,6 +59,38 @@ object UxPsychologyRepository {
             )
         ),
         UxLawPrinciple(
+            id = "grayscale_first",
+            name = "Design in Grayscale First (Refactoring UI)",
+            type = "Visual Hierarchy",
+            summary = "Even when you’re ready to refine an idea in higher fidelity, resist the temptation to introduce color right away. By designing in grayscale, you’re forced to use spacing, contrast, and size to do all of the heavy lifting. It’s a little more challenging, but you’ll end up with a clearer interface with a strong hierarchy that’s easy to enhance with color later.",
+            psychologicalBasis = "Luminance and spatial frequency processing in human vision: The human visual system processes luminance (rods and magnocellular pathway) before chromatic information (parvocellular pathway). If an interface relies on color alone to communicate importance or separation, it collapses for color-blind users and creates visual clutter. Enforcing monochromatic hierarchy guarantees contrast, scannability, and structural clarity.",
+            practicalApplication = "1) Size Hierarchy: Use distinct type scale steps (e.g. 20sp for primary translation, 14sp for body, 10sp for metadata). 2) Contrast via Tone: Differentiate secondary text with 60% opacity or slate tones rather than colored fonts. 3) Generous Spacing: Use 8dp/14dp/16dp spacing to establish Gestalt grouping. 4) Border Subtlety: Use 1dp light gray borders rather than loud colored outlines. 5) Accent as Enhancement: Add brand color (Teal) only after the monochrome layout works flawlessly on its own.",
+            appImplementationExample = "Applied in this app: Every card and button uses sizing (54dp CTA vs 36dp utility), type hierarchy (Bold titles vs muted subtitles), and generous white space. You can toggle the live 'Grayscale Audit Mode' in the app to prove that the hierarchy remains 100% readable without color.",
+            keyTakeaways = listOf(
+                "Color is an enhancer, not a crutch: if the design doesn't work in grayscale, color won't save it.",
+                "Use size, weight, tone, and spacing to establish the primary, secondary, and tertiary hierarchy.",
+                "Monochromatic design inherently satisfies WCAG contrast and color-blind accessibility.",
+                "Introducing color last ensures that accents immediately draw the eye to high-priority actions."
+            )
+        ),
+        UxLawPrinciple(
+            id = "visual_hierarchy_deemphasis",
+            name = "Visual Hierarchy via De-Emphasis (Refactoring UI)",
+            type = "Visual Hierarchy",
+            summary = "When you deliberately de-emphasize secondary and tertiary information, and make an effort to highlight the elements that are most important, the result is immediately more pleasing, even though the color scheme, font choice, and layout haven't changed. When everything in an interface is competing for attention, it feels noisy and chaotic, like one big wall of content where it’s not clear what actually matters.",
+            psychologicalBasis = "Attentional selectivity & cognitive bandwidth: Human visual perception operates on contrast gradients. If all elements have equal weight (all dark, all bold, equal size), the eye experiences visual friction and cannot establish a saccadic scan path. Deliberately suppressing secondary and tertiary information creates an effortless visual hierarchy that guides the user directly to what matters most.",
+            practicalApplication = "1) Stick to 2 or 3 colors: A dark color for primary content (headline/main translation), a grey for secondary content (publish date/phonetics), and a lighter grey for tertiary content (footer/metadata). 2) Stick to 2 font weights: Normal (400 or 500) for body, heavier (600 or 700) for emphasis. 3) Stay away from font weights under 400 for UI work: use a lighter grey color or smaller size instead. 4) DON'T USE GREY ON COLORED SURFACES: Making text closer to the background color is what actually creates hierarchy, not making it light grey. 5) AVOID REDUCING WHITE OPACITY: While it reduces contrast, it makes text look dull, washed out, and disabled. 6) ELIMINATE IMAGE & PATTERN BLEED-THROUGH: Reduced opacity lets background textures bleed through letters. 7) THE HUE-MATCHING FORMULA: Choose a color with the same hue as the background, and adjust the saturation and lightness until it looks right to you. Hand-picking a color this way makes it easy to reduce the contrast without the text looking faded or washed out.",
+            appImplementationExample = "Applied in this app: The translation card uses dark slate (#0F172A, Bold 700, 20sp), medium grey (#475569, Normal 400, 14sp), and lighter grey (#94A3B8, Normal 400, 11sp) on white. On colored surfaces and gradient headers, secondary subtitles use a hand-picked solid hue-matched mint tint (#CCFBF1 / #A7F3D0, sharing Teal's 174° hue with tailored 85% lightness and 65% saturation) rather than semi-transparent white, completely preventing pattern bleed-through while keeping text crisp, vibrant, and readable without looking faded.",
+            keyTakeaways = listOf(
+                "Not all information is created equal: classify every element into Primary, Secondary, or Tertiary.",
+                "Stick to 2–3 colors: dark for primary, grey for secondary, lighter grey for tertiary on white.",
+                "Stick to 2 font weights: normal (400/500) for body, heavier (600/700) for emphasis. Avoid <400 weights.",
+                "Making text closer to the background color creates hierarchy, not making it light grey.",
+                "AVOID white text with reduced opacity: it looks dull/disabled and lets background patterns bleed through.",
+                "Choose a color with the same hue, and adjust saturation and lightness: reduces contrast without text looking faded."
+            )
+        ),
+        UxLawPrinciple(
             id = "fitts_law",
             name = "Fitts's Law",
             type = "Predictive Model",
@@ -204,11 +236,14 @@ object UxPsychologyRepository {
         "1. Audit & Map Affordances (Gibson & Norman)" to "Determine all possible interactions between the user and the digital environment: ensure critical actions are perceivable, eliminate false affordances (inert elements looking interactive), surface hidden affordances (native OS text selection handles, long-press gestures), and respect physical touch constraints (48dp+ targets).",
         "2. Specify Clear Signifiers (Norman's Principle)" to "Ensure every affordance is accompanied by an explicit perceptual signifier communicating WHERE to interact, WHAT will happen, and WHAT STATE the system is in through chevrons, labels, borders, and state beacons.",
         "3. Establish Natural Mappings (Don Norman)" to "Design intuitive spatial, directional, and conceptual relationships between controls and real-world results: collocate manipulation tools directly with the content they govern, mirror physical/reading layouts (Left-to-Right data flow), and order registers logically.",
-        "4. Align with Mental Models (Jakob's Law)" to "Analyze how your target audience already operates in everyday apps. Align language switching, layout, and iconography with established user schemas.",
-        "5. Minimize Decision Pathways (Hick's Law)" to "Reduce choice count to 3–5 items per view. Group secondary options with progressive disclosure so users never experience choice paralysis.",
-        "6. Ergonomic Touch Geometry (Fitts's Law)" to "Ensure every interactive component meets the 48dp x 48dp touch target threshold. Place primary navigation and high-frequency CTAs within the natural thumb zone.",
-        "7. Temporal Response (<400ms Doherty Threshold)" to "Provide instantaneous visual feedback within 100ms. Use shimmer skeletons to manage perceived latency and provide offline fallbacks for reliability.",
-        "8. Cognitive Chunking & Scannability (Miller's Law)" to "Structure complex information into 4–7 visually bounded cards. Use Gestalt Proximity to bind controls directly to their relevant content.",
-        "9. Ethical Transparency & Autonomy Audit" to "Verify that psychological techniques serve to empower the user rather than coerce them. Eliminate deceptive dark patterns, confirmshaming, or hidden traps."
+        "4. Design in Grayscale First (Refactoring UI)" to "Resist adding color early. Use typography sizing, font weight, contrast shades (slate/charcoal/white), and generous 8dp-grid spacing to do all the heavy lifting before introducing color accents.",
+        "5. De-Emphasize Secondary & Tertiary Data (Refactoring UI)" to "Stick to 2–3 text colors (dark for primary, grey for secondary, lighter grey for tertiary) and 2 font weights (normal 400/500 for body, bold 600/700 for headlines). Avoid font weights under 400 for UI work—use lighter color or smaller font size to de-emphasize instead.",
+        "6. Contrast on Colored Surfaces: Hand-Picked Hues (Refactoring UI)" to "Making text closer to the background color is what creates hierarchy, not light grey. Don't use reduced white opacity (it looks faded/disabled and patterns bleed through). Instead, choose a color with the same hue as the background, and adjust saturation and lightness until it looks right: this reduces contrast cleanly without text looking faded.",
+        "7. Align with Mental Models (Jakob's Law)" to "Analyze how your target audience already operates in everyday apps. Align language switching, layout, and iconography with established user schemas.",
+        "8. Minimize Decision Pathways (Hick's Law)" to "Reduce choice count to 3–5 items per view. Group secondary options with progressive disclosure so users never experience choice paralysis.",
+        "9. Ergonomic Touch Geometry (Fitts's Law)" to "Ensure every interactive component meets the 48dp x 48dp touch target threshold. Place primary navigation and high-frequency CTAs within the natural thumb zone.",
+        "10. Temporal Response (<400ms Doherty Threshold)" to "Provide instantaneous visual feedback within 100ms. Use shimmer skeletons to manage perceived latency and provide offline fallbacks for reliability.",
+        "11. Cognitive Chunking & Scannability (Miller's Law)" to "Structure complex information into 4–7 visually bounded cards. Use Gestalt Proximity to bind controls directly to their relevant content.",
+        "12. Ethical Transparency & Autonomy Audit" to "Verify that psychological techniques serve to empower the user rather than coerce them. Eliminate deceptive dark patterns, confirmshaming, or hidden traps."
     )
 }

@@ -60,6 +60,13 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
     var isTranslating by remember { mutableStateOf(false) }
     var copiedField by remember { mutableStateOf<String?>(null) }
     var swapRotation by remember { mutableFloatStateOf(0f) }
+    var isGrayscaleAudit by remember { mutableStateOf(false) }
+
+    // Dynamic color tokens: Refactoring UI Principle (Designing in Grayscale First)
+    val themePrimary = if (isGrayscaleAudit) Color(0xFF0F172A) else TealPrimary
+    val themeDark = if (isGrayscaleAudit) Color(0xFF1E293B) else TealDark
+    val themeAccent = if (isGrayscaleAudit) Color(0xFF475569) else TealAccent
+    val themeGradient = if (isGrayscaleAudit) listOf(Color(0xFF0F172A), Color(0xFF334155)) else listOf(TealDark, TealPrimary)
 
     // TextToSpeech for pronunciation with Auditory-Visual Mapping
     var tts by remember { mutableStateOf<TextToSpeech?>(null) }
@@ -187,7 +194,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 .fillMaxWidth()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(TealDark, TealPrimary)
+                        colors = themeGradient
                     ),
                     shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
                 )
@@ -276,6 +283,78 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                 )
                             }
                         }
+
+                        // Grayscale Audit Toggle Pill (Refactoring UI Principle)
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (isGrayscaleAudit) Color.White else Color.White.copy(alpha = 0.2f),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .clickable { isGrayscaleAudit = !isGrayscaleAudit }
+                                .testTag("grayscale_audit_toggle")
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.InvertColors,
+                                    contentDescription = "Toggle Grayscale Audit",
+                                    tint = if (isGrayscaleAudit) Color(0xFF0F172A) else Color.White,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Text(
+                                    text = if (isGrayscaleAudit) "Mono ON" else "Grayscale",
+                                    color = if (isGrayscaleAudit) Color(0xFF0F172A) else Color.White,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Grayscale Audit Notice Banner
+        AnimatedVisibility(
+            visible = isGrayscaleAudit,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFF1F5F9),
+                border = BorderStroke(1.dp, Color(0xFF94A3B8)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.InvertColors,
+                        contentDescription = null,
+                        tint = Color(0xFF0F172A),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Column {
+                        Text(
+                            text = "Refactoring UI: Grayscale Audit Mode Active",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0F172A)
+                        )
+                        Text(
+                            text = "Colors stripped to monochrome. Spacing (16dp), contrast (slate vs charcoal), and sizing (54dp buttons, 20sp text) do all the heavy lifting without relying on color.",
+                            fontSize = 10.sp,
+                            lineHeight = 14.sp,
+                            color = Color(0xFF475569)
+                        )
                     }
                 }
             }
@@ -309,7 +388,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                        border = BorderStroke(1.dp, TealPrimary.copy(alpha = 0.3f)),
+                        border = BorderStroke(1.dp, themePrimary.copy(alpha = 0.3f)),
                         modifier = Modifier.weight(1f)
                     ) {
                         Row(
@@ -350,7 +429,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                     Surface(
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.surfaceVariant,
-                        border = BorderStroke(1.dp, TealPrimary.copy(alpha = 0.4f)),
+                        border = BorderStroke(1.dp, themePrimary.copy(alpha = 0.4f)),
                         modifier = Modifier
                             .padding(horizontal = 6.dp)
                             .minimumInteractiveComponentSize()
@@ -365,7 +444,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             Icon(
                                 imageVector = Icons.Default.SwapHoriz,
                                 contentDescription = "Swap orientation",
-                                tint = TealPrimary,
+                                tint = themePrimary,
                                 modifier = Modifier
                                     .size(22.dp)
                                     .rotate(swapRotation)
@@ -382,7 +461,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.5.dp, TealPrimary.copy(alpha = 0.6f)),
+                            border = BorderStroke(1.5.dp, themePrimary.copy(alpha = 0.6f)),
                             modifier = Modifier
                                 .menuAnchor()
                                 .fillMaxWidth()
@@ -411,7 +490,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                             text = "CHANGE ▾",
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = TealPrimary,
+                                            color = themePrimary,
                                             letterSpacing = 0.5.sp
                                         )
                                     }
@@ -419,7 +498,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                 Icon(
                                     imageVector = if (isDropdownExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
                                     contentDescription = "Tap to open language menu",
-                                    tint = TealPrimary,
+                                    tint = themePrimary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -500,7 +579,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             }
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = TealPrimary,
+                            selectedContainerColor = themePrimary,
                             selectedLabelColor = Color.White
                         ),
                         shape = RoundedCornerShape(10.dp),
@@ -546,7 +625,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                     text = if (text.isNotBlank()) "ACTIVE" else "EMPTY",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (text.isNotBlank()) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = if (text.isNotBlank()) themePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                                 )
                             }
@@ -573,14 +652,14 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                     Icon(
                                         imageVector = Icons.Default.ContentPaste,
                                         contentDescription = "Paste text",
-                                        tint = TealDark,
+                                        tint = themeDark,
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Text(
                                         text = "Paste",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = TealDark
+                                        color = themeDark
                                     )
                                 }
                             }
@@ -641,7 +720,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                         },
                         colors = OutlinedTextFieldDefaults.colors(
                             unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
-                            focusedBorderColor = TealPrimary
+                            focusedBorderColor = themePrimary
                         ),
                         shape = RoundedCornerShape(12.dp)
                     )
@@ -686,7 +765,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                         text = "(SELECT ONE)",
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 10.sp,
-                        color = TealPrimary
+                        color = themePrimary
                     )
                 }
 
@@ -707,9 +786,9 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                 .testTag("tone_chip_${t.id}"),
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) TealPrimary else MaterialTheme.colorScheme.surface
+                                containerColor = if (isSelected) themePrimary else MaterialTheme.colorScheme.surface
                             ),
-                            border = if (isSelected) BorderStroke(2.dp, TealDark) else CardDefaults.outlinedCardBorder()
+                            border = if (isSelected) BorderStroke(2.dp, themeDark) else CardDefaults.outlinedCardBorder()
                         ) {
                             Column(
                                 modifier = Modifier
@@ -757,7 +836,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                     .testTag("translate_button"),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = TealPrimary,
+                    containerColor = themePrimary,
                     contentColor = Color.White,
                     disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
                     disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
@@ -821,7 +900,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             text = catTitle,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TealDark
+                            color = themeDark
                         )
                         Row(
                             modifier = Modifier
@@ -851,7 +930,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                         Icon(
                                             imageVector = Icons.Default.NorthEast,
                                             contentDescription = "Use phrase",
-                                            tint = TealPrimary,
+                                            tint = themePrimary,
                                             modifier = Modifier.size(12.dp)
                                         )
                                         Text(
@@ -878,7 +957,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                    border = BorderStroke(1.dp, TealAccent.copy(alpha = 0.4f))
+                    border = BorderStroke(1.dp, themeAccent.copy(alpha = 0.4f))
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -891,13 +970,13 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
-                                color = TealPrimary
+                                color = themePrimary
                             )
                             Text(
                                 text = "Analyzing linguistic nuances, register, and idioms…",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = TealPrimary
+                                color = themePrimary
                             )
                         }
 
@@ -935,7 +1014,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(20.dp),
-                                color = TealPrimary,
+                                color = themePrimary,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
@@ -965,11 +1044,11 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            HorizontalDivider(modifier = Modifier.weight(1f), color = TealPrimary.copy(alpha = 0.35f))
+                            HorizontalDivider(modifier = Modifier.weight(1f), color = themePrimary.copy(alpha = 0.35f))
                             Surface(
                                 shape = RoundedCornerShape(20.dp),
                                 color = MaterialTheme.colorScheme.surfaceVariant,
-                                border = BorderStroke(1.dp, TealPrimary.copy(alpha = 0.4f)),
+                                border = BorderStroke(1.dp, themePrimary.copy(alpha = 0.4f)),
                                 modifier = Modifier.padding(horizontal = 8.dp)
                             ) {
                                 Row(
@@ -986,14 +1065,14 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                     Icon(
                                         imageVector = Icons.Default.ArrowForward,
                                         contentDescription = "Maps to target",
-                                        tint = TealPrimary,
+                                        tint = themePrimary,
                                         modifier = Modifier.size(13.dp)
                                     )
                                     Text(
                                         text = "${selectedLanguage.flagEmoji} ${selectedLanguage.displayName.substringBefore(" ")}",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = TealDark
+                                        color = themeDark
                                     )
                                     Text(
                                         text = "(${tone.label})",
@@ -1002,7 +1081,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                     )
                                 }
                             }
-                            HorizontalDivider(modifier = Modifier.weight(1f), color = TealPrimary.copy(alpha = 0.35f))
+                            HorizontalDivider(modifier = Modifier.weight(1f), color = themePrimary.copy(alpha = 0.35f))
                         }
 
                         // Primary Translation Card with Direct Spatial Mapping
@@ -1012,7 +1091,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                 .testTag("result_card"),
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            border = if (isSpeaking) BorderStroke(2.dp, TealAccent) else BorderStroke(1.5.dp, TealPrimary)
+                            border = if (isSpeaking) BorderStroke(2.dp, themeAccent) else BorderStroke(1.5.dp, themePrimary)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 // Top status bar: Language + Engine State Signifier
@@ -1082,7 +1161,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                     Icon(
                                         imageVector = Icons.Default.TouchApp,
                                         contentDescription = null,
-                                        tint = TealPrimary.copy(alpha = 0.8f),
+                                        tint = themePrimary.copy(alpha = 0.8f),
                                         modifier = Modifier.size(12.dp)
                                     )
                                     Text(
@@ -1102,7 +1181,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                             imageVector = Icons.Default.RecordVoiceOver,
                                             contentDescription = null,
                                             modifier = Modifier.size(14.dp),
-                                            tint = TealAccent
+                                            tint = themeAccent
                                         )
                                         Text(
                                             text = pron,
@@ -1152,7 +1231,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                         shape = RoundedCornerShape(10.dp),
                                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                                         colors = if (isSpeaking) ButtonDefaults.outlinedButtonColors(
-                                            containerColor = TealPrimary.copy(alpha = 0.15f)
+                                            containerColor = themePrimary.copy(alpha = 0.15f)
                                         ) else ButtonDefaults.outlinedButtonColors(),
                                         modifier = Modifier.minimumInteractiveComponentSize().testTag("tts_button")
                                     ) {
@@ -1160,14 +1239,14 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                             imageVector = if (isSpeaking) Icons.Default.GraphicEq else Icons.Default.VolumeUp,
                                             contentDescription = if (isSpeaking) "Stop speech" else "Listen audio pronunciation",
                                             modifier = Modifier.size(16.dp),
-                                            tint = TealPrimary
+                                            tint = themePrimary
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
                                             text = if (isSpeaking) "Speaking…" else "Listen",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = TealPrimary
+                                            color = themePrimary
                                         )
                                     }
 
@@ -1193,7 +1272,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                         Button(
                                             onClick = { copyToClipboard(currentResult.translation, selectedLanguage.displayName) },
                                             shape = RoundedCornerShape(10.dp),
-                                            colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
+                                            colors = ButtonDefaults.buttonColors(containerColor = themePrimary),
                                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                                             modifier = Modifier.minimumInteractiveComponentSize().testTag("copy_button")
                                         ) {
