@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.banglatranslator.data.GeminiTranslationService
@@ -201,9 +202,11 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Main Header Row: Logo & Title Column (unconstrained, full width)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Box(
                         modifier = Modifier
@@ -229,88 +232,94 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                         Text(
                             text = "Idiomatic, Slang & Uncensored Cross-Language Engine",
                             color = Color.White.copy(alpha = 0.85f),
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
+                }
 
-                    // System State Signifiers
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = Color(0xFFD32F2F).copy(alpha = 0.9f),
-                            modifier = Modifier.testTag("uncensored_badge")
+                // System State Signifiers Row (Beneath title, so title is never crushed)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color(0xFFD32F2F).copy(alpha = 0.9f),
+                        modifier = Modifier.testTag("uncensored_badge")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                horizontalArrangement = Arrangement.spacedBy(3.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.LockOpen,
-                                    contentDescription = "Uncensored mode enabled",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(11.dp)
-                                )
-                                Text(
-                                    text = "Uncensored",
-                                    color = Color.White,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Default.LockOpen,
+                                contentDescription = "Uncensored mode enabled",
+                                tint = Color.White,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Text(
+                                text = "Uncensored",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
+                    }
 
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = Color.White.copy(alpha = 0.2f)
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color.White.copy(alpha = 0.2f)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                horizontalArrangement = Arrangement.spacedBy(3.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = "Gemini Model",
-                                    tint = Color(0xFFFFD54F),
-                                    modifier = Modifier.size(11.dp)
-                                )
-                                Text(
-                                    text = "Gemini 3.8",
-                                    color = Color.White,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = "Gemini Model",
+                                tint = Color(0xFFFFD54F),
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Text(
+                                text = "Gemini 3.8",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
+                    }
 
-                        // Grayscale Audit Toggle Pill (Refactoring UI Principle)
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = if (isGrayscaleAudit) Color.White else Color.White.copy(alpha = 0.2f),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .clickable { isGrayscaleAudit = !isGrayscaleAudit }
-                                .testTag("grayscale_audit_toggle")
+                    // Grayscale Audit Toggle Pill (Refactoring UI Principle)
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = if (isGrayscaleAudit) Color.White else Color.White.copy(alpha = 0.2f),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable { isGrayscaleAudit = !isGrayscaleAudit }
+                            .testTag("grayscale_audit_toggle")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                horizontalArrangement = Arrangement.spacedBy(3.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.InvertColors,
-                                    contentDescription = "Toggle Grayscale Audit",
-                                    tint = if (isGrayscaleAudit) Color(0xFF0F172A) else Color.White,
-                                    modifier = Modifier.size(11.dp)
-                                )
-                                Text(
-                                    text = if (isGrayscaleAudit) "Mono ON" else "Grayscale",
-                                    color = if (isGrayscaleAudit) Color(0xFF0F172A) else Color.White,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Default.InvertColors,
+                                contentDescription = "Toggle Grayscale Audit",
+                                tint = if (isGrayscaleAudit) Color(0xFF0F172A) else Color.White,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Text(
+                                text = if (isGrayscaleAudit) "Mono ON" else "Grayscale",
+                                color = if (isGrayscaleAudit) Color(0xFF0F172A) else Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }

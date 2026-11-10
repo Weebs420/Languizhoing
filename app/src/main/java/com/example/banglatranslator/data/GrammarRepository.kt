@@ -158,6 +158,83 @@ object GrammarRepository {
             tips = listOf(
                 "Tag questions like ‘তাই না?’ (right?), ‘বুঝলা?’ (got it?), and ‘নাকি?’ (or what?) keep casual conversations flowing naturally."
             )
+        ),
+        GrammarTopic(
+            title = "কমন স্ল্যাং ও প্রাত্যহিক কথ্য ভাষা (Modern Slang & Idioms)",
+            subtitle = "Dhaka Street Slang, Pop Culture & Colloquialisms",
+            description = "Conversational spoken Bangla amongst friends and youth features colorful colloquial expressions that standard textbooks never teach.",
+            comparisons = listOf(
+                GrammarComparison(
+                    category = "Stress & Relief",
+                    item1Label = "Standard",
+                    item1Value = "অনেক ঝামেলা / চাপ",
+                    item2Label = "Slang",
+                    item2Value = "অনেক প্যারা (Para) / চিল (Chill)",
+                    note = "'প্যারা নাই চিল' (No stress, chill out) is the most common youth motto."
+                ),
+                GrammarComparison(
+                    category = "Excellence & Fire",
+                    item1Label = "Standard",
+                    item1Value = "অসাধারণ / চমৎকার",
+                    item2Label = "Slang",
+                    item2Value = "আগুন (Fire) / কাপায় দিছে (Rocked it)",
+                    note = "Used when an outfit, food, or musical performance is top-tier."
+                ),
+                GrammarComparison(
+                    category = "Exaggeration / Boasting",
+                    item1Label = "Standard",
+                    item1Value = "মিথ্যা কথা বলা",
+                    item2Label = "Slang",
+                    item2Value = "চাপাবাজি / ফাও কথা",
+                    note = "'চাপা মারিস না' means 'Stop bluffing / bragging'."
+                ),
+                GrammarComparison(
+                    category = "Addressing Friends",
+                    item1Label = "Standard",
+                    item1Value = "বন্ধু / ভাই",
+                    item2Label = "Slang",
+                    item2Value = "মামা (Mama) / ব্রো (Bro) / দোস্ত (Dost)",
+                    note = "'মামা' is universally used for friends, street vendors, and conductors."
+                )
+            ),
+            tips = listOf(
+                "Use youth slang strictly in informal situations with peers; avoid slang in professional or elder settings.",
+                "The app's 'Casual' tone register automatically incorporates these natural colloquialisms."
+            )
+        ),
+        GrammarTopic(
+            title = "বাংলা বাক্য গঠন ও পদক্রম (SOV Sentence Structure)",
+            subtitle = "Subject + Object + Verb vs English SVO",
+            description = "Bangla sentences place the verb at the very end of the clause, and use postpositions rather than English prepositions.",
+            comparisons = listOf(
+                GrammarComparison(
+                    category = "Basic Word Order",
+                    item1Label = "English (SVO)",
+                    item1Value = "I [S] eat [V] rice [O]",
+                    item2Label = "Bangla (SOV)",
+                    item2Value = "আমি [S] ভাত [O] খাই [V]",
+                    note = "The action verb consistently sits at the clause boundary."
+                ),
+                GrammarComparison(
+                    category = "Prepositions vs Postpositions",
+                    item1Label = "English (Before)",
+                    item1Value = "on the table, with him",
+                    item2Label = "Bangla (After)",
+                    item2Value = "টেবিলের উপরে, তার সাথে",
+                    note = "Location and accompaniment markers attach after the noun."
+                ),
+                GrammarComparison(
+                    category = "Negative Construction",
+                    item1Label = "English (Before Verb)",
+                    item1Value = "I do not know",
+                    item2Label = "Bangla (End of Clause)",
+                    item2Value = "আমি জানি না",
+                    note = "The negative marker ‘না’ goes after the verb in spoken sentences."
+                )
+            ),
+            tips = listOf(
+                "When speaking English, Bengalis often place time words first (e.g. 'Yesterday I went'); native Bangla sentences flexibly place time words at the front (e.g. 'কালকে আমি গিয়েছিলাম')."
+            )
         )
     )
 }

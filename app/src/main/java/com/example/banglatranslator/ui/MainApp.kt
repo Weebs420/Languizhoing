@@ -12,15 +12,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import com.example.banglatranslator.ui.screens.*
 import com.example.banglatranslator.ui.theme.TealDark
 import com.example.banglatranslator.ui.theme.TealPrimary
 
 enum class AppTab(val title: String, val icon: ImageVector) {
     TRANSLATE("Translate", Icons.Default.GTranslate),
-    PHRASEBOOK("Phrasebook", Icons.Default.AutoStories),
+    PHRASEBOOK("Phrases", Icons.Default.AutoStories),
     VOCABULARY("Vocab", Icons.Default.MenuBook),
-    COACHING("Coaching", Icons.Default.WorkspacePremium),
+    COACHING("Coach", Icons.Default.WorkspacePremium),
     GUIDE("Guide", Icons.Default.School)
 }
 
@@ -48,13 +51,23 @@ fun MainApp() {
                     NavigationBarItem(
                         selected = isSelected,
                         onClick = { currentTab = tab },
+                        alwaysShowLabel = true,
                         icon = {
                             Icon(
                                 imageVector = tab.icon,
                                 contentDescription = tab.title
                             )
                         },
-                        label = { Text(tab.title) },
+                        label = {
+                            Text(
+                                text = tab.title,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = TealPrimary,
                             selectedTextColor = TealDark,
