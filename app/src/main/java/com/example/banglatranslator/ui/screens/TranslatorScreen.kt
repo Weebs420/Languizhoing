@@ -34,10 +34,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.banglatranslator.data.FeedbackRepository
 import com.example.banglatranslator.data.GeminiTranslationService
+import com.example.banglatranslator.data.TranslationHistoryRepository
 import com.example.banglatranslator.model.TargetLanguage
 import com.example.banglatranslator.model.Tone
+import com.example.banglatranslator.model.TranslationHistoryItem
 import com.example.banglatranslator.model.TranslationResult
+import com.example.banglatranslator.ui.components.FeedbackDialog
 import com.example.banglatranslator.ui.theme.TealAccent
 import com.example.banglatranslator.ui.theme.TealDark
 import com.example.banglatranslator.ui.theme.TealPrimary
@@ -62,6 +66,10 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
     var copiedField by remember { mutableStateOf<String?>(null) }
     var swapRotation by remember { mutableFloatStateOf(0f) }
     var isGrayscaleAudit by remember { mutableStateOf(false) }
+    val historyList by TranslationHistoryRepository.history.collectAsState()
+    var showHistorySheet by remember { mutableStateOf(false) }
+    var showFeedbackDialog by remember { mutableStateOf(false) }
+    var isTranslationHelpful by remember { mutableStateOf<Boolean?>(null) }
 
     // Dynamic color tokens: Refactoring UI Principle (Designing in Grayscale First)
     val themePrimary = if (isGrayscaleAudit) Color(0xFF0F172A) else TealPrimary
@@ -127,13 +135,48 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
         if (text.isBlank() || isTranslating) return
         coroutineScope.launch {
             isTranslating = true
-            result = GeminiTranslationService.translate(text, selectedLanguage, tone)
+            val res = GeminiTranslationService.translate(text, selectedLanguage, tone)
+            result = res
             isTranslating = false
+            if (res.translation.isNotBlank()) {
+                TranslationHistoryRepository.addEntry(
+                    TranslationHistoryItem(
+                        sourceText = text,
+                        translatedText = res.translation,
+                        sourceLanguage = "Bangla",
+                        targetLanguage = selectedLanguage,
+                        tone = tone,
+                        detectedDialect = res.detectedDialect,
+                        isGeminiPowered = res.isGeminiPowered,
+                        literalMeaning = res.literal,
+                        pronunciation = res.pronunciation
+                    )
+                )
+            }
         }
     }
 
     LaunchedEffect(Unit) {
+        FeedbackRepository.init(context)
+        TranslationHistoryRepository.init(context)
         performTranslation()
+    }
+
+    fun restoreFromHistory(item: TranslationHistoryItem) {
+        text = item.sourceText
+        selectedLanguage = item.targetLanguage
+        tone = item.tone
+        result = TranslationResult(
+            originalBangla = item.sourceText,
+            translation = item.translatedText,
+            literal = item.literalMeaning,
+            targetLanguage = item.targetLanguage,
+            tone = item.tone,
+            detectedDialect = item.detectedDialect,
+            pronunciation = item.pronunciation,
+            isGeminiPowered = item.isGeminiPowered
+        )
+        Toast.makeText(context, "Restored translation into editor", Toast.LENGTH_SHORT).show()
     }
 
     fun copyToClipboard(content: String, label: String) {
@@ -317,6 +360,64 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                             Text(
                                 text = if (isGrayscaleAudit) "Mono ON" else "Grayscale",
                                 color = if (isGrayscaleAudit) Color(0xFF0F172A) else Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    // History quick button
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color.White.copy(alpha = 0.25f),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable { showHistorySheet = true }
+                            .testTag("header_history_button")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = "View Translation History",
+                                tint = Color.White,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Text(
+                                text = "History (${historyList.size})",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    // Feedback quick button
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color.White.copy(alpha = 0.25f),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable { showFeedbackDialog = true }
+                            .testTag("header_feedback_button")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Feedback,
+                                contentDescription = "Share Feedback",
+                                tint = Color.White,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Text(
+                                text = "Feedback",
+                                color = Color.White,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1299,6 +1400,91 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                                         }
                                     }
                                 }
+
+                                // Immediate & Unobtrusive Translation Quality Feedback
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = if (isTranslationHelpful != null) {
+                                            if (isTranslationHelpful == true) "✓ Marked accurate" else "Feedback noted"
+                                        } else {
+                                            "Was this translation accurate?"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (isTranslationHelpful != null) themePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = if (isTranslationHelpful != null) FontWeight.Bold else FontWeight.Normal
+                                    )
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        IconButton(
+                                            onClick = {
+                                                isTranslationHelpful = true
+                                                Toast.makeText(context, "Thanks for the feedback! Marked accurate.", Toast.LENGTH_SHORT).show()
+                                                FeedbackRepository.submitFeedback(
+                                                    com.example.banglatranslator.model.UserFeedback(
+                                                        rating = 5,
+                                                        category = com.example.banglatranslator.model.FeedbackCategory.TRANSLATION_QUALITY,
+                                                        feedbackText = "Accurate translation",
+                                                        sourceContext = text,
+                                                        translationContext = currentResult.translation
+                                                    )
+                                                )
+                                            },
+                                            modifier = Modifier
+                                                .size(34.dp)
+                                                .testTag("feedback_thumb_up")
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isTranslationHelpful == true) Icons.Default.ThumbUp else Icons.Default.ThumbUpOffAlt,
+                                                contentDescription = "Accurate translation",
+                                                tint = if (isTranslationHelpful == true) themePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+
+                                        IconButton(
+                                            onClick = {
+                                                isTranslationHelpful = false
+                                                showFeedbackDialog = true
+                                            },
+                                            modifier = Modifier
+                                                .size(34.dp)
+                                                .testTag("feedback_thumb_down")
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isTranslationHelpful == false) Icons.Default.ThumbDown else Icons.Default.ThumbDownOffAlt,
+                                                contentDescription = "Inaccurate translation",
+                                                tint = if (isTranslationHelpful == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+
+                                        IconButton(
+                                            onClick = { showFeedbackDialog = true },
+                                            modifier = Modifier
+                                                .size(34.dp)
+                                                .testTag("feedback_dialog_button")
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ChatBubbleOutline,
+                                                contentDescription = "Send detailed feedback",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -1377,7 +1563,7 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
 
                                     Spacer(modifier = Modifier.height(8.dp))
 
-                                    currentResult.notes.forEach { note ->
+                                     currentResult.notes.forEach { note ->
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -1404,7 +1590,570 @@ fun TranslatorScreen(modifier: Modifier = Modifier) {
                 }
             }
 
+            // ==========================================
+            // RECENT TRANSLATION HISTORY SECTION
+            // ==========================================
+            if (historyList.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("recent_history_card"),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    shape = RoundedCornerShape(20.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Section Header
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Recent Translations",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer
+                                ) {
+                                    Text(
+                                        text = "${historyList.size}",
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+
+                            TextButton(
+                                onClick = { showHistorySheet = true },
+                                modifier = Modifier.testTag("view_all_history_btn")
+                            ) {
+                                Text(
+                                    text = "View All",
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+
+                        // Preview of latest 3 items
+                        val recentItems = historyList.take(3)
+                        recentItems.forEach { item ->
+                            HistoryItemCard(
+                                item = item,
+                                onRestore = { restoreFromHistory(item) },
+                                onToggleFavorite = { TranslationHistoryRepository.toggleFavorite(item.id) },
+                                onDelete = { TranslationHistoryRepository.deleteEntry(item.id) },
+                                onCopy = { copyToClipboard(item.translatedText, "history_${item.id}") },
+                                onSpeak = {
+                                    speakText(item.translatedText, item.targetLanguage)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // Full History Bottom Sheet
+        if (showHistorySheet) {
+            TranslationHistoryBottomSheet(
+                historyList = historyList,
+                onDismiss = { showHistorySheet = false },
+                onRestore = { item ->
+                    restoreFromHistory(item)
+                    showHistorySheet = false
+                },
+                onToggleFavorite = { id -> TranslationHistoryRepository.toggleFavorite(id) },
+                onDelete = { id -> TranslationHistoryRepository.deleteEntry(id) },
+                onClearAll = { TranslationHistoryRepository.clearHistory() },
+                onCopy = { content -> copyToClipboard(content, "history_sheet") },
+                onSpeak = { content, lang ->
+                    speakText(content, lang)
+                }
+            )
+        }
+
+        // Feedback Modal Bottom Sheet
+        if (showFeedbackDialog) {
+            FeedbackDialog(
+                initialSourceContext = text,
+                initialTranslationContext = result?.translation,
+                onDismiss = { showFeedbackDialog = false },
+                onSubmit = { feedback ->
+                    FeedbackRepository.submitFeedback(feedback)
+                    Toast.makeText(context, "Feedback sent! Thank you.", Toast.LENGTH_SHORT).show()
+                }
+            )
         }
     }
 }
+
+/**
+ * Compact item card for history entries
+ */
+@Composable
+fun HistoryItemCard(
+    item: TranslationHistoryItem,
+    onRestore: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onDelete: () -> Unit,
+    onCopy: () -> Unit,
+    onSpeak: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onRestore)
+            .testTag("history_item_${item.id}"),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Header: Badges & Timestamp & Action icons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            text = "${item.sourceLanguage} → ${item.targetLanguage.displayName}",
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+
+                    if (!item.detectedDialect.isNullOrEmpty()) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer
+                        ) {
+                            Text(
+                                text = item.detectedDialect,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = formatRelativeTime(item.timestamp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    IconButton(
+                        onClick = onToggleFavorite,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .testTag("fav_btn_${item.id}")
+                    ) {
+                        Icon(
+                            imageVector = if (item.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = if (item.isFavorite) "Remove from favorites" else "Add to favorites",
+                            tint = if (item.isFavorite) Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .testTag("delete_btn_${item.id}")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = "Delete from history",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+
+            // Source Text (Bangla)
+            Text(
+                text = item.sourceText,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            // Translated Text
+            Text(
+                text = item.translatedText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            // Bottom actions bar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Tap to load into editor ↗",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    IconButton(
+                        onClick = onSpeak,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.VolumeUp,
+                            contentDescription = "Pronounce",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onCopy,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = "Copy translation",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Full Translation History Bottom Sheet Modal
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TranslationHistoryBottomSheet(
+    historyList: List<TranslationHistoryItem>,
+    onDismiss: () -> Unit,
+    onRestore: (TranslationHistoryItem) -> Unit,
+    onToggleFavorite: (String) -> Unit,
+    onDelete: (String) -> Unit,
+    onClearAll: () -> Unit,
+    onCopy: (String) -> Unit,
+    onSpeak: (String, TargetLanguage) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    var showOnlyFavorites by remember { mutableStateOf(false) }
+    var showClearConfirmDialog by remember { mutableStateOf(false) }
+
+    val filteredList = remember(historyList, searchQuery, showOnlyFavorites) {
+        historyList.filter { item ->
+            val matchesFilter = !showOnlyFavorites || item.isFavorite
+            val matchesSearch = searchQuery.isBlank() ||
+                    item.sourceText.contains(searchQuery, ignoreCase = true) ||
+                    item.translatedText.contains(searchQuery, ignoreCase = true) ||
+                    (item.detectedDialect?.contains(searchQuery, ignoreCase = true) == true)
+            matchesFilter && matchesSearch
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false),
+        containerColor = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.testTag("translation_history_sheet")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Header row: Title + Clear all + Close
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.History,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "Translation History",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (historyList.isNotEmpty()) {
+                        IconButton(
+                            onClick = { showClearConfirmDialog = true },
+                            modifier = Modifier.testTag("clear_all_history_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteSweep,
+                                contentDescription = "Clear all history",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.testTag("close_history_sheet_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // Search Bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("history_search_input"),
+                placeholder = { Text("Search translated phrases, slang or dialects...") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "Clear search")
+                        }
+                    }
+                },
+                shape = RoundedCornerShape(14.dp),
+                singleLine = true
+            )
+
+            // Filter Chips
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = !showOnlyFavorites,
+                    onClick = { showOnlyFavorites = false },
+                    label = { Text("All (${historyList.size})") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.FormatListBulleted,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                )
+
+                FilterChip(
+                    selected = showOnlyFavorites,
+                    onClick = { showOnlyFavorites = true },
+                    label = { Text("★ Starred (${historyList.count { it.isFavorite }})") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = if (showOnlyFavorites) Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                )
+            }
+
+            // Content List or Empty State
+            if (filteredList.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 40.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (showOnlyFavorites) Icons.Default.StarBorder else Icons.Default.HistoryEdu,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Text(
+                            text = if (showOnlyFavorites) "No starred translations yet" else "No matching translations found",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = if (showOnlyFavorites) "Tap the star icon on any entry to bookmark it" else "Translate phrases to build your local translation history",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    filteredList.forEach { item ->
+                        HistoryItemCard(
+                            item = item,
+                            onRestore = { onRestore(item) },
+                            onToggleFavorite = { onToggleFavorite(item.id) },
+                            onDelete = { onDelete(item.id) },
+                            onCopy = { onCopy(item.translatedText) },
+                            onSpeak = { onSpeak(item.translatedText, item.targetLanguage) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showClearConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirmDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { Text("Clear All Translation History?") },
+            text = { Text("This will permanently remove all saved translations from this device. Bookmarked items will also be removed.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onClearAll()
+                        showClearConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Clear All")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+/**
+ * Helper to display relative timestamps (e.g., Just now, 5m ago, 2h ago, Yesterday)
+ */
+fun formatRelativeTime(timestamp: Long): String {
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+    val seconds = diff / 1000
+    val minutes = seconds / 60
+    val hours = minutes / 60
+    val days = hours / 24
+
+    return when {
+        seconds < 45 -> "Just now"
+        minutes < 60 -> "${minutes}m ago"
+        hours < 24 -> "${hours}h ago"
+        days < 7 -> "${days}d ago"
+        else -> {
+            val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
+            sdf.format(java.util.Date(timestamp))
+        }
+    }
+}
+
