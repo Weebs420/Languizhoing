@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,7 +34,10 @@ import com.example.banglatranslator.ui.theme.TealDark
 import com.example.banglatranslator.ui.theme.TealPrimary
 
 @Composable
-fun PhrasebookScreen(modifier: Modifier = Modifier) {
+fun PhrasebookScreen(
+    modifier: Modifier = Modifier,
+    onOpenInTranslator: (String) -> Unit = {}
+) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
 
@@ -238,21 +242,51 @@ fun PhrasebookScreen(modifier: Modifier = Modifier) {
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End,
+                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = if (copiedId == item.id) Icons.Default.Check else Icons.Default.ContentCopy,
-                                    contentDescription = "Tap to copy",
-                                    modifier = Modifier.size(12.dp),
-                                    tint = if (copiedId == item.id) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = if (copiedId == item.id) "Copied" else "Tap to copy",
-                                    fontSize = 11.sp,
-                                    color = if (copiedId == item.id) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { onOpenInTranslator(item.bangla) }
+                                        .testTag("phrase_translate_${item.id}")
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Translate,
+                                            contentDescription = "Try in Translator",
+                                            modifier = Modifier.size(13.dp),
+                                            tint = TealPrimary
+                                        )
+                                        Text(
+                                            text = "Try in Translator",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TealPrimary
+                                        )
+                                    }
+                                }
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = if (copiedId == item.id) Icons.Default.Check else Icons.Default.ContentCopy,
+                                        contentDescription = "Tap to copy",
+                                        modifier = Modifier.size(12.dp),
+                                        tint = if (copiedId == item.id) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (copiedId == item.id) "Copied" else "Tap card to copy",
+                                        fontSize = 11.sp,
+                                        color = if (copiedId == item.id) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }

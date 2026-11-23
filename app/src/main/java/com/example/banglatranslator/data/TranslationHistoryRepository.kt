@@ -86,12 +86,18 @@ object TranslationHistoryRepository {
                 val toneId = obj.optString("tone", Tone.NEUTRAL.id)
                 val tone = Tone.values().find { it.id == toneId } ?: Tone.NEUTRAL
 
+                val sourceLangName = obj.optString("sourceLanguage", "Bangla")
+                val isBnToTarget = obj.optBoolean("isBanglaToTarget", true)
+                val fallbackSourceCode = if (isBnToTarget) TargetLanguage.BANGLA.code else targetLangCode
+                val sourceLangCode = obj.optString("sourceLangCode", fallbackSourceCode)
+
                 list.add(
                     TranslationHistoryItem(
                         id = obj.optString("id", java.util.UUID.randomUUID().toString()),
                         sourceText = obj.optString("sourceText", ""),
                         translatedText = obj.optString("translatedText", ""),
-                        sourceLanguage = obj.optString("sourceLanguage", "Bangla"),
+                        sourceLanguage = sourceLangName,
+                        sourceLangCode = sourceLangCode,
                         targetLanguage = targetLang,
                         tone = tone,
                         timestamp = obj.optLong("timestamp", System.currentTimeMillis()),
@@ -99,7 +105,8 @@ object TranslationHistoryRepository {
                         detectedDialect = if (obj.has("detectedDialect") && !obj.isNull("detectedDialect")) obj.optString("detectedDialect") else null,
                         isGeminiPowered = obj.optBoolean("isGeminiPowered", true),
                         literalMeaning = obj.optString("literalMeaning", ""),
-                        pronunciation = if (obj.has("pronunciation") && !obj.isNull("pronunciation")) obj.optString("pronunciation") else null
+                        pronunciation = if (obj.has("pronunciation") && !obj.isNull("pronunciation")) obj.optString("pronunciation") else null,
+                        isBanglaToTarget = isBnToTarget
                     )
                 )
             }
@@ -119,6 +126,7 @@ object TranslationHistoryRepository {
                     put("sourceText", item.sourceText)
                     put("translatedText", item.translatedText)
                     put("sourceLanguage", item.sourceLanguage)
+                    put("sourceLangCode", item.sourceLangCode)
                     put("targetLanguage", item.targetLanguage.code)
                     put("tone", item.tone.id)
                     put("timestamp", item.timestamp)
@@ -127,6 +135,7 @@ object TranslationHistoryRepository {
                     put("isGeminiPowered", item.isGeminiPowered)
                     put("literalMeaning", item.literalMeaning)
                     put("pronunciation", item.pronunciation)
+                    put("isBanglaToTarget", item.isBanglaToTarget)
                 }
                 jsonArray.put(obj)
             }
@@ -142,7 +151,9 @@ object TranslationHistoryRepository {
         if (current.isNotEmpty()) {
             val first = current.first()
             if (first.sourceText.trim() == item.sourceText.trim() &&
+                first.sourceLangCode == item.sourceLangCode &&
                 first.targetLanguage == item.targetLanguage &&
+                first.isBanglaToTarget == item.isBanglaToTarget &&
                 first.tone == item.tone
             ) {
                 // Update timestamp of latest instead of duplicating

@@ -346,10 +346,49 @@ object TranslationEngine {
         )
     )
 
+    fun detectLanguage(text: String): TargetLanguage {
+        if (text.any { it in '\u0980'..'\u09FF' }) return TargetLanguage.BANGLA
+        if (text.any { it in '\u0900'..'\u097F' }) return TargetLanguage.HINDI
+        if (text.any { it in '\u0600'..'\u06FF' }) {
+            return if (text.contains("پ") || text.contains("ٹ") || text.contains("ے") || text.contains("ہ")) {
+                TargetLanguage.URDU
+            } else {
+                TargetLanguage.ARABIC
+            }
+        }
+        if (text.any { it in '\u3040'..'\u30FF' }) return TargetLanguage.JAPANESE
+        if (text.any { it in '\uAC00'..'\uD7AF' }) return TargetLanguage.KOREAN
+        if (text.any { it in '\u4E00'..'\u9FFF' }) return TargetLanguage.CHINESE
+        if (text.any { it in '\u0400'..'\u04FF' }) return TargetLanguage.RUSSIAN
+
+        val lower = text.lowercase()
+        if (lower.contains("¿") || lower.contains("¡") || lower.contains("hola") || lower.contains("gracias") || lower.contains("cómo estás") || lower.contains("buenos días")) {
+            return TargetLanguage.SPANISH
+        }
+        if (lower.contains("bonjour") || lower.contains("merci") || lower.contains("ça va") || lower.contains("s'il vous plaît")) {
+            return TargetLanguage.FRENCH
+        }
+        if (lower.contains("danke") || lower.contains("guten tag") || lower.contains("wie geht") || lower.contains("tschüss")) {
+            return TargetLanguage.GERMAN
+        }
+        if (lower.contains("obrigado") || lower.contains("olá") || lower.contains("tudo bem")) {
+            return TargetLanguage.PORTUGUESE
+        }
+        if (lower.contains("ciao") || lower.contains("grazie") || lower.contains("buongiorno")) {
+            return TargetLanguage.ITALIAN
+        }
+        if (lower.contains("merhaba") || lower.contains("teşekkür") || lower.contains("nasılsın")) {
+            return TargetLanguage.TURKISH
+        }
+        return TargetLanguage.ENGLISH_US
+    }
+
     fun translate(
         input: String,
         tone: Tone = Tone.NEUTRAL,
-        targetLanguage: TargetLanguage = com.example.banglatranslator.model.TargetLanguage.ENGLISH_US
+        targetLanguage: TargetLanguage = TargetLanguage.ENGLISH_US,
+        isBanglaToTarget: Boolean = true,
+        sourceLanguage: TargetLanguage = if (isBanglaToTarget) TargetLanguage.BANGLA else targetLanguage
     ): TranslationResult {
         val trimmed = input.trim()
         if (trimmed.isEmpty()) {
@@ -357,15 +396,48 @@ object TranslationEngine {
                 originalBangla = "",
                 translation = "",
                 literal = "",
+                sourceLanguage = sourceLanguage,
                 targetLanguage = targetLanguage,
                 spanish = "",
                 tone = tone,
                 notes = emptyList(),
-                isGeminiPowered = false
+                isGeminiPowered = false,
+                isBanglaToTarget = targetLanguage != TargetLanguage.BANGLA
             )
         }
 
-        // Direct matching against seed database
+        val effectiveSource = if (sourceLanguage == TargetLanguage.AUTO_DETECT) {
+            detectLanguage(trimmed)
+        } else {
+            sourceLanguage
+        }
+        val detectedName = if (sourceLanguage == TargetLanguage.AUTO_DETECT) effectiveSource.displayName else null
+
+        if (effectiveSource == targetLanguage) {
+            return TranslationResult(
+                originalBangla = trimmed,
+                translation = trimmed,
+                literal = "Same source and target language (${targetLanguage.displayName})",
+                sourceLanguage = effectiveSource,
+                targetLanguage = targetLanguage,
+                tone = tone,
+                notes = listOf("Source and target are both ${targetLanguage.displayName}. Choose a different target language or swap to translate."),
+                isGeminiPowered = false,
+                detectedDialect = "${targetLanguage.displayName} (${tone.label})",
+                detectedSourceLanguage = detectedName,
+                isBanglaToTarget = effectiveSource == TargetLanguage.BANGLA
+            )
+        }
+
+        if (targetLanguage == TargetLanguage.BANGLA) {
+            return translateToBangla(trimmed, tone, effectiveSource, detectedName)
+        }
+
+        if (effectiveSource != TargetLanguage.BANGLA) {
+            return translateCrossLanguage(trimmed, tone, effectiveSource, targetLanguage, detectedName)
+        }
+
+        // Direct matching against seed database (Bangla -> TargetLanguage)
         val matched = seedDatabase.firstOrNull { seed ->
             seed.banglaMatches.any { match ->
                 trimmed.equals(match, ignoreCase = true) ||
@@ -381,14 +453,14 @@ object TranslationEngine {
             }
 
             val targetTranslation = when (targetLanguage) {
-                com.example.banglatranslator.model.TargetLanguage.ENGLISH_US -> en
-                com.example.banglatranslator.model.TargetLanguage.ENGLISH_UK -> en.replace("wanna", "want to").replace("gonna", "going to")
-                com.example.banglatranslator.model.TargetLanguage.SPANISH -> matched.spanish
-                com.example.banglatranslator.model.TargetLanguage.ARABIC -> getArabicTranslation(trimmed)
-                com.example.banglatranslator.model.TargetLanguage.HINDI -> getHindiTranslation(trimmed)
-                com.example.banglatranslator.model.TargetLanguage.FRENCH -> getFrenchTranslation(trimmed)
-                com.example.banglatranslator.model.TargetLanguage.GERMAN -> getGermanTranslation(trimmed)
-                com.example.banglatranslator.model.TargetLanguage.JAPANESE -> getJapaneseTranslation(trimmed)
+                TargetLanguage.ENGLISH_US -> en
+                TargetLanguage.ENGLISH_UK -> en.replace("wanna", "want to").replace("gonna", "going to")
+                TargetLanguage.SPANISH -> matched.spanish
+                TargetLanguage.ARABIC -> getArabicTranslation(trimmed)
+                TargetLanguage.HINDI -> getHindiTranslation(trimmed)
+                TargetLanguage.FRENCH -> getFrenchTranslation(trimmed)
+                TargetLanguage.GERMAN -> getGermanTranslation(trimmed)
+                TargetLanguage.JAPANESE -> getJapaneseTranslation(trimmed)
                 else -> en
             }
 
@@ -396,23 +468,27 @@ object TranslationEngine {
                 originalBangla = trimmed,
                 translation = targetTranslation,
                 literal = matched.literalEn,
+                sourceLanguage = TargetLanguage.BANGLA,
                 targetLanguage = targetLanguage,
                 spanish = matched.spanish,
                 tone = tone,
                 notes = matched.notes,
                 isGeminiPowered = false,
-                detectedDialect = "Colloquial Spoken Bangla"
+                detectedDialect = "Colloquial Spoken Bangla",
+                detectedSourceLanguage = detectedName,
+                isBanglaToTarget = true
             )
         }
 
-        // Dynamic fallback linguistic translator
-        return generateDynamicTranslation(trimmed, tone, targetLanguage)
+        // Dynamic fallback linguistic translator (Bangla -> TargetLanguage)
+        return generateDynamicTranslation(trimmed, tone, targetLanguage, detectedName)
     }
 
     private fun generateDynamicTranslation(
         text: String,
         tone: Tone,
-        targetLanguage: TargetLanguage = com.example.banglatranslator.model.TargetLanguage.ENGLISH_US
+        targetLanguage: TargetLanguage = TargetLanguage.ENGLISH_US,
+        detectedSourceLanguage: String? = null
     ): TranslationResult {
         val notes = mutableListOf<String>()
 
@@ -481,12 +557,15 @@ object TranslationEngine {
             originalBangla = text,
             translation = translation,
             literal = literal.trim(),
+            sourceLanguage = TargetLanguage.BANGLA,
             targetLanguage = targetLanguage,
             spanish = spanish,
             tone = tone,
             notes = notes,
             isGeminiPowered = false,
-            detectedDialect = "Spoken Modern Bangla"
+            detectedDialect = "Spoken Modern Bangla",
+            detectedSourceLanguage = detectedSourceLanguage,
+            isBanglaToTarget = true
         )
     }
 
@@ -608,5 +687,405 @@ object TranslationEngine {
         if (text.contains("শুভ সকাল")) return "おはようございます！"
         if (text.contains("শুভ রাত্রি")) return "おやすみなさい！"
         return "入力されたバングラ語テキストの自然な日本語訳。"
+    }
+
+    private fun translateToBangla(
+        text: String,
+        tone: Tone,
+        sourceLanguage: TargetLanguage,
+        detectedSourceLanguage: String? = null
+    ): TranslationResult {
+        val lower = text.lowercase()
+
+        // 1. Reverse match against seedDatabase
+        val seedMatch = seedDatabase.firstOrNull { seed ->
+            seed.casualEn.equals(text, ignoreCase = true) ||
+                seed.neutralEn.equals(text, ignoreCase = true) ||
+                seed.formalEn.equals(text, ignoreCase = true) ||
+                seed.spanish.equals(text, ignoreCase = true) ||
+                seed.casualEn.contains(text, ignoreCase = true) && text.length >= 8
+        }
+        if (seedMatch != null) {
+            val bangla = seedMatch.banglaMatches.first()
+            return TranslationResult(
+                originalBangla = bangla,
+                translation = bangla,
+                literal = "Source (${sourceLanguage.displayName}): $text",
+                sourceLanguage = sourceLanguage,
+                targetLanguage = TargetLanguage.BANGLA,
+                tone = tone,
+                notes = seedMatch.notes,
+                isGeminiPowered = false,
+                detectedDialect = when (tone) {
+                    Tone.CASUAL -> "Spoken Bangla (তুই / Friend)"
+                    Tone.NEUTRAL -> "Spoken Bangla (তুমি / Everyday)"
+                    Tone.FORMAL -> "Polite Bangla (আপনি / Formal)"
+                },
+                detectedSourceLanguage = detectedSourceLanguage,
+                isBanglaToTarget = false
+            )
+        }
+
+        // 2. Match against Oxford VocabularyRepository if single word or close match
+        val vocabMatch = VocabularyRepository.allEntries.firstOrNull {
+            it.word.equals(text, ignoreCase = true)
+        }
+        if (vocabMatch != null) {
+            return TranslationResult(
+                originalBangla = vocabMatch.banglaMeaning,
+                translation = vocabMatch.banglaMeaning,
+                literal = "${vocabMatch.word} (${vocabMatch.pos}, CEFR ${vocabMatch.cefr})",
+                sourceLanguage = sourceLanguage,
+                targetLanguage = TargetLanguage.BANGLA,
+                tone = tone,
+                notes = listOfNotNull(
+                    vocabMatch.exampleUs?.let { "Example usage: \"$it\"" },
+                    "Oxford ${if (vocabMatch.inOxford3000) "3000" else "5000"} vocabulary entry."
+                ),
+                isGeminiPowered = false,
+                detectedDialect = "Standard Bangla Vocabulary",
+                detectedSourceLanguage = detectedSourceLanguage,
+                isBanglaToTarget = false
+            )
+        }
+
+        // 3. Common conversational phrases -> Bangla with honorific register mapping
+        data class ReverseEntry(
+            val keywords: List<String>,
+            val casual: String,
+            val neutral: String,
+            val formal: String,
+            val pronunciation: String,
+            val note: String
+        )
+
+        val reversePhrases = listOf(
+            ReverseEntry(
+                keywords = listOf("how are you", "how's it going", "what's up", "como estas", "¿cómo estás?", "comment ça va", "wie geht", "কैसे हो", "كيف حالك", "お元気"),
+                casual = "কী অবস্থা রে? কেমন আছিস?",
+                neutral = "কেমন আছো? কী খবর?",
+                formal = "আপনি কেমন আছেন?",
+                pronunciation = when (tone) {
+                    Tone.CASUAL -> "Ki obostha re? Kemon achish?"
+                    Tone.NEUTRAL -> "Kemon acho? Ki khobor?"
+                    Tone.FORMAL -> "Apni kemon achen?"
+                },
+                note = "Bangla greetings shift pronoun & verb ending by respect tier: তুই (আছিস) → তুমি (আছো) → আপনি (আছেন)."
+            ),
+            ReverseEntry(
+                keywords = listOf("thank you", "thanks", "gracias", "merci", "danke", "धन्यवाद", "شكرا", "ありがとう"),
+                casual = "থ্যাংকস রে, দোস্ত!",
+                neutral = "অনেক ধন্যবাদ তোমাকে!",
+                formal = "আপনাকে অসংখ্য ধন্যবাদ।",
+                pronunciation = when (tone) {
+                    Tone.CASUAL -> "Thanks re, dosto!"
+                    Tone.NEUTRAL -> "Onek dhonnobad tomake!"
+                    Tone.FORMAL -> "Apnake oshongkho dhonnobad."
+                },
+                note = "Casual Dhaka Bangla frequently uses the loanword 'থ্যাংকস' among friends."
+            ),
+            ReverseEntry(
+                keywords = listOf("no worries", "no problem", "chill", "relax", "sin preocupaciones", "tranquilo"),
+                casual = "প্যারা নাই, চিল!",
+                neutral = "কোনো সমস্যা নেই, চিন্তা কোরো না।",
+                formal = "কোনো অসুবিধা নেই, নিশ্চিন্ত থাকুন।",
+                pronunciation = when (tone) {
+                    Tone.CASUAL -> "Para nai, chill!"
+                    Tone.NEUTRAL -> "Kono shomoshsha nei, chinta koro na."
+                    Tone.FORMAL -> "Kono oshubidha nei, nishchinto thakun."
+                },
+                note = "'প্যারা নাই, চিল!' is iconic Dhaka youth slang for 'no stress'."
+            ),
+            ReverseEntry(
+                keywords = listOf("sorry", "my bad", "apologize", "lo siento", "perdón", "désolé"),
+                casual = "সরি রে, ভুল হয়ে গেছে!",
+                neutral = "দুঃখিত, আমার ভুল হয়েছে।",
+                formal = "আমি আন্তরিকভাবে দুঃখিত।",
+                pronunciation = when (tone) {
+                    Tone.CASUAL -> "Sorry re, bhul hoye geche!"
+                    Tone.NEUTRAL -> "Dukkhito, amar bhul hoyeche."
+                    Tone.FORMAL -> "Ami antorikbhabe dukkhito."
+                },
+                note = "Formal apologies pair 'আন্তরিকভাবে' (sincerely) with 'দুঃখিত'."
+            ),
+            ReverseEntry(
+                keywords = listOf("good morning", "morning", "buenos días", "bonjour", "guten morgen", "おはよう"),
+                casual = "গুড মর্নিং রে!",
+                neutral = "শুভ সকাল!",
+                formal = "সুপ্রভাত!",
+                pronunciation = if (tone == Tone.CASUAL) "Good morning re!" else "Shubho shokal!",
+                note = "In casual speech, urban Bangladeshis often say 'গুড মর্নিং' with Bangla particles like 'রে'."
+            ),
+            ReverseEntry(
+                keywords = listOf("where are you", "where you at", "dónde estás"),
+                casual = "কই আছিস তুই?",
+                neutral = "তুমি কোথায় আছো?",
+                formal = "আপনি এই মুহূর্তে কোথায় আছেন?",
+                pronunciation = when (tone) {
+                    Tone.CASUAL -> "Koi achish tui?"
+                    Tone.NEUTRAL -> "Tumi kothay acho?"
+                    Tone.FORMAL -> "Apni ei muhurte kothay achen?"
+                },
+                note = "'কই' is the colloquial contraction of 'কোথায়' (where)."
+            )
+        )
+
+        val matchedReverse = reversePhrases.firstOrNull { entry ->
+            entry.keywords.any { lower.contains(it) }
+        }
+
+        if (matchedReverse != null) {
+            val out = when (tone) {
+                Tone.CASUAL -> matchedReverse.casual
+                Tone.NEUTRAL -> matchedReverse.neutral
+                Tone.FORMAL -> matchedReverse.formal
+            }
+            return TranslationResult(
+                originalBangla = out,
+                translation = out,
+                literal = "Translated from ${sourceLanguage.displayName}: \"$text\"",
+                sourceLanguage = sourceLanguage,
+                targetLanguage = TargetLanguage.BANGLA,
+                tone = tone,
+                pronunciation = matchedReverse.pronunciation,
+                notes = listOf(matchedReverse.note),
+                isGeminiPowered = false,
+                detectedDialect = when (tone) {
+                    Tone.CASUAL -> "Spoken Bangla (তুই / Friend)"
+                    Tone.NEUTRAL -> "Spoken Bangla (তুমি / Everyday)"
+                    Tone.FORMAL -> "Polite Bangla (আপনি / Formal)"
+                },
+                detectedSourceLanguage = detectedSourceLanguage,
+                isBanglaToTarget = false
+            )
+        }
+
+        val fallbackBangla = when (tone) {
+            Tone.CASUAL -> "“$text” — এর চলতি ও ঘরোয়া বাংলা রূপ (অফলাইন ইঞ্জিন)"
+            Tone.NEUTRAL -> "“$text” — এর স্বাভাবিক কথ্য বাংলা অনুবাদ"
+            Tone.FORMAL -> "“$text” — এর মার্জিত ও প্রমিত বাংলা অনুবাদ"
+        }
+
+        return TranslationResult(
+            originalBangla = fallbackBangla,
+            translation = fallbackBangla,
+            literal = "Source (${sourceLanguage.displayName}): $text",
+            sourceLanguage = sourceLanguage,
+            targetLanguage = TargetLanguage.BANGLA,
+            tone = tone,
+            notes = listOf(
+                "${sourceLanguage.displayName} → Bangla register set to ${tone.label} (${when (tone) {
+                    Tone.CASUAL -> "তুই / Casual friend style"
+                    Tone.NEUTRAL -> "তুমি / Everyday spoken"
+                    Tone.FORMAL -> "আপনি / Respectful polite"
+                }})."
+            ),
+            isGeminiPowered = false,
+            detectedDialect = "Spoken Bangla (${tone.label})",
+            detectedSourceLanguage = detectedSourceLanguage,
+            isBanglaToTarget = false
+        )
+    }
+
+    private fun translateCrossLanguage(
+        text: String,
+        tone: Tone,
+        sourceLanguage: TargetLanguage,
+        targetLanguage: TargetLanguage,
+        detectedSourceLanguage: String? = null
+    ): TranslationResult {
+        val lower = text.lowercase()
+
+        data class MultilingualConcept(
+            val triggers: List<String>,
+            val byLang: Map<TargetLanguage, String>,
+            val literal: String,
+            val note: String
+        )
+
+        val concepts = listOf(
+            MultilingualConcept(
+                triggers = listOf("hello", "hi", "hey", "hola", "bonjour", "hallo", "ciao", "olá", "merhaba", "नमस्ते", "مرحبا", "こんにちは", "안녕하세요", "你好", "привет"),
+                byLang = mapOf(
+                    TargetLanguage.ENGLISH_US to if (tone == Tone.FORMAL) "Hello, nice to meet you." else "Hey there!",
+                    TargetLanguage.ENGLISH_UK to if (tone == Tone.FORMAL) "Hello, lovely to meet you." else "Hello there!",
+                    TargetLanguage.SPANISH to if (tone == Tone.FORMAL) "Hola, mucho gusto." else "¡Hola! ¿Qué tal?",
+                    TargetLanguage.FRENCH to if (tone == Tone.FORMAL) "Bonjour, enchanté." else "Salut !",
+                    TargetLanguage.GERMAN to if (tone == Tone.FORMAL) "Guten Tag!" else "Hallo!",
+                    TargetLanguage.ARABIC to "مرحباً!",
+                    TargetLanguage.HINDI to if (tone == Tone.FORMAL) "नमस्ते!" else "अरे, क्या हाल है?",
+                    TargetLanguage.URDU to "السلام علیکم!",
+                    TargetLanguage.JAPANESE to if (tone == Tone.FORMAL) "こんにちは。" else "やあ！",
+                    TargetLanguage.KOREAN to if (tone == Tone.FORMAL) "안녕하세요." else "안녕!",
+                    TargetLanguage.CHINESE to "你好！",
+                    TargetLanguage.PORTUGUESE to if (tone == Tone.FORMAL) "Olá, tudo bem?" else "Oi!",
+                    TargetLanguage.ITALIAN to if (tone == Tone.FORMAL) "Buongiorno!" else "Ciao!",
+                    TargetLanguage.TURKISH to "Merhaba!",
+                    TargetLanguage.RUSSIAN to if (tone == Tone.FORMAL) "Здравствуйте!" else "Привет!"
+                ),
+                literal = "Greeting",
+                note = "Adapted greeting formality to ${tone.label} register in ${targetLanguage.displayName}."
+            ),
+            MultilingualConcept(
+                triggers = listOf("how are you", "what's up", "how's it going", "cómo estás", "como estas", "comment ça va", "wie geht", "kaise ho", "कैसे हो", "كيف حالك", "お元気", "잘 지냈어"),
+                byLang = mapOf(
+                    TargetLanguage.ENGLISH_US to if (tone == Tone.CASUAL) "What's up? How's it going?" else "How are you doing?",
+                    TargetLanguage.ENGLISH_UK to if (tone == Tone.CASUAL) "You alright? How's it going?" else "How are you?",
+                    TargetLanguage.SPANISH to if (tone == Tone.FORMAL) "¿Cómo está usted?" else "¿Cómo estás?",
+                    TargetLanguage.FRENCH to if (tone == Tone.FORMAL) "Comment allez-vous ?" else "Comment ça va ?",
+                    TargetLanguage.GERMAN to if (tone == Tone.FORMAL) "Wie geht es Ihnen?" else "Wie geht's?",
+                    TargetLanguage.ARABIC to "كيف حالك؟",
+                    TargetLanguage.HINDI to if (tone == Tone.FORMAL) "आप कैसे हैं?" else "क्या हाल है?",
+                    TargetLanguage.URDU to "آپ کیسے ہیں؟",
+                    TargetLanguage.JAPANESE to "お元気ですか？",
+                    TargetLanguage.KOREAN to "어떻게 지내세요?",
+                    TargetLanguage.CHINESE to "你好吗？",
+                    TargetLanguage.PORTUGUESE to "Tudo bem com você?",
+                    TargetLanguage.ITALIAN to if (tone == Tone.FORMAL) "Come sta?" else "Come stai?",
+                    TargetLanguage.TURKISH to "Nasılsın?",
+                    TargetLanguage.RUSSIAN to "Как дела?"
+                ),
+                literal = "How are you?",
+                note = "Politeness pronouns adjusted to ${tone.label} register."
+            ),
+            MultilingualConcept(
+                triggers = listOf("thank you", "thanks", "gracias", "merci", "danke", "grazie", "obrigado", "teşekkür", "धन्यवाद", "शुक्रिया", "شكرا", "ありがとう", "감사", "谢谢", "спасибо"),
+                byLang = mapOf(
+                    TargetLanguage.ENGLISH_US to if (tone == Tone.CASUAL) "Thanks a ton!" else "Thank you very much!",
+                    TargetLanguage.ENGLISH_UK to if (tone == Tone.CASUAL) "Cheers, mate!" else "Thank you kindly.",
+                    TargetLanguage.SPANISH to "¡Muchas gracias!",
+                    TargetLanguage.FRENCH to "Merci beaucoup !",
+                    TargetLanguage.GERMAN to "Vielen Dank!",
+                    TargetLanguage.ARABIC to "شكراً جزيلاً!",
+                    TargetLanguage.HINDI to "बहुत-बहुत धन्यवाद!",
+                    TargetLanguage.URDU to "بہت شکریہ!",
+                    TargetLanguage.JAPANESE to if (tone == Tone.CASUAL) "ありがとう！" else "どうもありがとうございます！",
+                    TargetLanguage.KOREAN to if (tone == Tone.CASUAL) "고마워!" else "감사합니다!",
+                    TargetLanguage.CHINESE to "非常感谢！",
+                    TargetLanguage.PORTUGUESE to "Muito obrigado!",
+                    TargetLanguage.ITALIAN to "Grazie mille!",
+                    TargetLanguage.TURKISH to "Çok teşekkür ederim!",
+                    TargetLanguage.RUSSIAN to "Большое спасибо!"
+                ),
+                literal = "Thank you",
+                note = "Idiomatic gratitude expression in ${targetLanguage.displayName}."
+            ),
+            MultilingualConcept(
+                triggers = listOf("good morning", "buenos días", "guten morgen", "buongiorno", "bom dia", "सुप्रभात", "صباح الخير", "おはよう"),
+                byLang = mapOf(
+                    TargetLanguage.ENGLISH_US to "Good morning!",
+                    TargetLanguage.ENGLISH_UK to "Good morning!",
+                    TargetLanguage.SPANISH to "¡Buenos días!",
+                    TargetLanguage.FRENCH to "Bonjour !",
+                    TargetLanguage.GERMAN to "Guten Morgen!",
+                    TargetLanguage.ARABIC to "صباح الخير!",
+                    TargetLanguage.HINDI to "सुप्रभात!",
+                    TargetLanguage.URDU to "صبح بخیر!",
+                    TargetLanguage.JAPANESE to "おはようございます！",
+                    TargetLanguage.KOREAN to "좋은 아침이에요!",
+                    TargetLanguage.CHINESE to "早上好！",
+                    TargetLanguage.PORTUGUESE to "Bom dia!",
+                    TargetLanguage.ITALIAN to "Buongiorno!",
+                    TargetLanguage.TURKISH to "Günaydın!",
+                    TargetLanguage.RUSSIAN to "Доброе утро!"
+                ),
+                literal = "Good morning",
+                note = "Standard morning greeting in ${targetLanguage.displayName}."
+            ),
+            MultilingualConcept(
+                triggers = listOf("no worries", "no problem", "chill", "relax", "sin preocupaciones", "pas de problème", "kein problem"),
+                byLang = mapOf(
+                    TargetLanguage.ENGLISH_US to if (tone == Tone.CASUAL) "No sweat, chill!" else "No problem at all.",
+                    TargetLanguage.ENGLISH_UK to "No worries at all.",
+                    TargetLanguage.SPANISH to "Sin preocupaciones, ¡tranquilo!",
+                    TargetLanguage.FRENCH to "Pas de problème, détends-toi !",
+                    TargetLanguage.GERMAN to "Kein Problem, entspann dich!",
+                    TargetLanguage.ARABIC to "لا توجد مشكلة، استرخِ!",
+                    TargetLanguage.HINDI to "कोई तनाव नहीं, आराम करो!",
+                    TargetLanguage.JAPANESE to "大丈夫、リラックスして！",
+                    TargetLanguage.KOREAN to "걱정 마, 편하게 있어!",
+                    TargetLanguage.CHINESE to "没关系，放轻松！"
+                ),
+                literal = "No problem / relax",
+                note = "Casual reassurance adapted to ${targetLanguage.displayName}."
+            )
+        )
+
+        val matchedConcept = concepts.firstOrNull { concept ->
+            concept.triggers.any { lower.contains(it) }
+        }
+
+        if (matchedConcept != null) {
+            val out = matchedConcept.byLang[targetLanguage]
+                ?: matchedConcept.byLang[TargetLanguage.ENGLISH_US]
+                ?: text
+            return TranslationResult(
+                originalBangla = text,
+                translation = out,
+                literal = "${sourceLanguage.displayName} → ${targetLanguage.displayName} (${matchedConcept.literal})",
+                sourceLanguage = sourceLanguage,
+                targetLanguage = targetLanguage,
+                tone = tone,
+                notes = listOf(matchedConcept.note),
+                isGeminiPowered = false,
+                detectedDialect = "${sourceLanguage.displayName} → ${targetLanguage.displayName}",
+                detectedSourceLanguage = detectedSourceLanguage,
+                isBanglaToTarget = false
+            )
+        }
+
+        // Cross-check if input matches any seed phrase translation
+        val matchedSeed = seedDatabase.firstOrNull { seed ->
+            seed.casualEn.equals(text, ignoreCase = true) ||
+                seed.neutralEn.equals(text, ignoreCase = true) ||
+                seed.formalEn.equals(text, ignoreCase = true) ||
+                seed.spanish.equals(text, ignoreCase = true)
+        }
+        if (matchedSeed != null) {
+            val out = when (targetLanguage) {
+                TargetLanguage.ENGLISH_US -> when (tone) {
+                    Tone.CASUAL -> matchedSeed.casualEn
+                    Tone.NEUTRAL -> matchedSeed.neutralEn
+                    Tone.FORMAL -> matchedSeed.formalEn
+                }
+                TargetLanguage.ENGLISH_UK -> matchedSeed.neutralEn
+                TargetLanguage.SPANISH -> matchedSeed.spanish
+                TargetLanguage.FRENCH -> getFrenchTranslation(matchedSeed.banglaMatches.first())
+                TargetLanguage.GERMAN -> getGermanTranslation(matchedSeed.banglaMatches.first())
+                TargetLanguage.ARABIC -> getArabicTranslation(matchedSeed.banglaMatches.first())
+                TargetLanguage.HINDI -> getHindiTranslation(matchedSeed.banglaMatches.first())
+                TargetLanguage.JAPANESE -> getJapaneseTranslation(matchedSeed.banglaMatches.first())
+                else -> matchedSeed.neutralEn
+            }
+            return TranslationResult(
+                originalBangla = text,
+                translation = out,
+                literal = matchedSeed.literalEn,
+                sourceLanguage = sourceLanguage,
+                targetLanguage = targetLanguage,
+                tone = tone,
+                notes = matchedSeed.notes,
+                isGeminiPowered = false,
+                detectedDialect = "${sourceLanguage.displayName} (${tone.label})",
+                detectedSourceLanguage = detectedSourceLanguage,
+                isBanglaToTarget = false
+            )
+        }
+
+        return TranslationResult(
+            originalBangla = text,
+            translation = "[${targetLanguage.displayName} · ${tone.label}] $text",
+            literal = "Offline cross-language placeholder (${sourceLanguage.displayName} → ${targetLanguage.displayName})",
+            sourceLanguage = sourceLanguage,
+            targetLanguage = targetLanguage,
+            tone = tone,
+            notes = listOf(
+                "Offline database handles Bangla ↔ English and common global phrases. Add a Gemini API key in AI Studio Secrets for full real-time ${sourceLanguage.displayName} → ${targetLanguage.displayName} AI translation."
+            ),
+            isGeminiPowered = false,
+            detectedDialect = "${sourceLanguage.displayName} → ${targetLanguage.displayName}",
+            detectedSourceLanguage = detectedSourceLanguage,
+            isBanglaToTarget = false
+        )
     }
 }

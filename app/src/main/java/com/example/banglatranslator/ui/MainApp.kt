@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
+import com.example.banglatranslator.model.TargetLanguage
 import com.example.banglatranslator.ui.screens.*
 import com.example.banglatranslator.ui.theme.TealDark
 import com.example.banglatranslator.ui.theme.TealPrimary
@@ -27,9 +28,18 @@ enum class AppTab(val title: String, val icon: ImageVector) {
     GUIDE("Guide", Icons.Default.School)
 }
 
+data class TranslatorPrefill(
+    val text: String,
+    val sourceLanguage: TargetLanguage = TargetLanguage.BANGLA,
+    val targetLanguage: TargetLanguage = TargetLanguage.ENGLISH_US,
+    val isBanglaToTarget: Boolean = sourceLanguage == TargetLanguage.BANGLA,
+    val id: Long = System.currentTimeMillis()
+)
+
 @Composable
 fun MainApp() {
     var currentTab by remember { mutableStateOf(AppTab.TRANSLATE) }
+    var translatorPrefill by remember { mutableStateOf<TranslatorPrefill?>(null) }
 
     // Intercept back button to return to Translate if on secondary tab
     if (currentTab != AppTab.TRANSLATE) {
@@ -84,9 +94,35 @@ fun MainApp() {
             .padding(innerPadding)
 
         when (currentTab) {
-            AppTab.TRANSLATE -> TranslatorScreen(modifier = screenModifier)
-            AppTab.PHRASEBOOK -> PhrasebookScreen(modifier = screenModifier)
-            AppTab.VOCABULARY -> VocabularyScreen(modifier = screenModifier)
+            AppTab.TRANSLATE -> TranslatorScreen(
+                modifier = screenModifier,
+                prefill = translatorPrefill,
+                onPrefillConsumed = { translatorPrefill = null }
+            )
+            AppTab.PHRASEBOOK -> PhrasebookScreen(
+                modifier = screenModifier,
+                onOpenInTranslator = { phraseText ->
+                    translatorPrefill = TranslatorPrefill(
+                        text = phraseText,
+                        sourceLanguage = TargetLanguage.BANGLA,
+                        targetLanguage = TargetLanguage.ENGLISH_US,
+                        isBanglaToTarget = true
+                    )
+                    currentTab = AppTab.TRANSLATE
+                }
+            )
+            AppTab.VOCABULARY -> VocabularyScreen(
+                modifier = screenModifier,
+                onOpenInTranslator = { englishWord ->
+                    translatorPrefill = TranslatorPrefill(
+                        text = englishWord,
+                        sourceLanguage = TargetLanguage.ENGLISH_US,
+                        targetLanguage = TargetLanguage.BANGLA,
+                        isBanglaToTarget = false
+                    )
+                    currentTab = AppTab.TRANSLATE
+                }
+            )
             AppTab.COACHING -> CoachingScreen(modifier = screenModifier)
             AppTab.GUIDE -> GrammarGuideScreen(modifier = screenModifier)
         }

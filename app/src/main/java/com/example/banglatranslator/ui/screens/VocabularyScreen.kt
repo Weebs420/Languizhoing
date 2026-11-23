@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,7 +36,10 @@ import com.example.banglatranslator.data.VocabularyRepository
 import com.example.banglatranslator.ui.theme.*
 
 @Composable
-fun VocabularyScreen(modifier: Modifier = Modifier) {
+fun VocabularyScreen(
+    modifier: Modifier = Modifier,
+    onOpenInTranslator: (String) -> Unit = {}
+) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
 
@@ -333,19 +337,52 @@ fun VocabularyScreen(modifier: Modifier = Modifier) {
                                     }
                                 }
 
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = if (copiedId == item.id) Icons.Default.Check else Icons.Default.ContentCopy,
-                                        contentDescription = "Copy",
-                                        modifier = Modifier.size(12.dp),
-                                        tint = if (copiedId == item.id) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = if (copiedId == item.id) "Copied" else "Tap to copy",
-                                        fontSize = 11.sp,
-                                        color = if (copiedId == item.id) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .clickable { onOpenInTranslator(item.word) }
+                                            .testTag("vocab_translate_${item.id}")
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Translate,
+                                                contentDescription = "Translate word",
+                                                modifier = Modifier.size(11.dp),
+                                                tint = TealPrimary
+                                            )
+                                            Text(
+                                                text = "Translate",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = TealPrimary
+                                            )
+                                        }
+                                    }
+
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = if (copiedId == item.id) Icons.Default.Check else Icons.Default.ContentCopy,
+                                            contentDescription = "Copy",
+                                            modifier = Modifier.size(12.dp),
+                                            tint = if (copiedId == item.id) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = if (copiedId == item.id) "Copied" else "Copy",
+                                            fontSize = 11.sp,
+                                            color = if (copiedId == item.id) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
                         }
